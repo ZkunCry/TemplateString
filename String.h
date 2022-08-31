@@ -14,6 +14,12 @@ class Iterator;
 template<typename T>
 class Reverse_Iterator;
 
+enum Errors
+{
+	SIZE,
+	OUT_OF_RANGE,
+	SMALL_NUM
+};
 class Exception // Abstract exception class(Base Class)
 {
 protected:
@@ -60,6 +66,8 @@ public:
 	String(char symbol);
 	String(size_t n, char symbol);
 	String(int n);
+	String(const String& other, size_t pos, size_t count);
+	String(const char* ps, size_t count);
 	~String()noexcept;
 	/////////
 
@@ -99,7 +107,7 @@ public:
 	const char* c_str() const;
 	String& Resize(int n);
 	String& Resize(short int n, char symbol);
-	String SubStr(size_t pos = 0, short int count = Npos);
+	String SubStr(size_t pos = 0, int count = Npos)const;
 	String& Push_back(const char c);
 	String& pop_back();
 	String& Push_front(const char c);
@@ -110,9 +118,10 @@ public:
 	String& lower(size_t start, size_t end);
 	String& upper(size_t start, size_t end);
 	size_t find(char symbol, size_t position = 0);
-	size_t find(const char* const str);
+	size_t find(const char*  str);
 	size_t find(const char* const str, size_t pos = Npos);
 	size_t find(const char* const str, size_t pos, size_t n);
+	size_t rfind(const char* str, size_t pos = Npos);
 	String& append(const String& other, size_t start);
 	String& append(const char* other, size_t num);
 	String& append(const String& other, size_t start, size_t end);
@@ -135,6 +144,9 @@ public:
 	void swap(String& str);
 	char& at(size_t pos);
 	int compare(size_t start, size_t num, const String& s) const;
+	int compare(size_t start, size_t num, const char* s) const;
+	int compare(const String& s) const noexcept;
+	int compare(const char *s) const;
 	void readfile(const char *nameF);
 	void writefile(const char* nameF);
 	//Functions that return a reference to the first and last object of a string
@@ -390,6 +402,22 @@ String<T>::const_iterator String<T>::cend() const
 
 /////////////////TemplateClass String///////////////////
 template<typename T>
+inline String<T>::String(const char* ps, size_t count)
+{
+	this->str = new T[count + 1];
+	size = count;
+	strncpy(str, ps, size);
+	str[size] = 0;
+}
+template<typename T>
+inline String<T>::String(const String& other, size_t pos, size_t count)
+{
+	this->str = new T[count - pos+1];
+	this->size = count - pos;
+	strncpy(str, other.str, size);
+	str[size] = 0;
+}
+template<typename T>
 String<T>::String()
 {
 	this->str = new T[1];
@@ -407,12 +435,9 @@ String<T>::String(const char* str)
 template<typename T>
 String<T>::String(const String<T>& other) :String(other.str) {}
 template<typename T>
-String<T>::String(String&& other) noexcept
+String<T>::String(String<T>&& other)noexcept :String()
 {
-	this->size = other.size;
-	this->str = std::move(other.str);
-	other.str = nullptr;
-	other.size = 0;
+	swap(other);
 }
 template<typename T>
 String<T>::String(char symbol)
@@ -642,12 +667,26 @@ inline constexpr char& String<T>::front()
 template<typename T>
 inline int String<T>::compare(size_t start, size_t num, const String<T>& s) const
 {
-	if (num < strlen(s.Str))
-		return -1;
-	else if (num > strlen(s.Str))
-		return 1;
-	else if (strcmp(this->Str, s.Str) == 0)
+	const String& temp = String::SubStr(start, num);
+	return (temp == s) == 0;
+}
+template<typename T>
+inline int String<T>::compare(size_t start, size_t num, const char* s) const
+{
+	String stemp(s);
+	int BOOL = String::compare(start, num, stemp);
+	if (BOOL == 1)
 		return 0;
+}
+template<typename T>
+inline int String<T>::compare(const String& s) const noexcept
+{
+	return (String(this->str) == s) == 0;
+}
+template<typename T>
+inline int String<T>::compare(const char* s) const
+{
+	return strcmp(this->str, s) == 0;
 }
 //Returning a reference to an element of a string
 template<typename T>
@@ -656,7 +695,7 @@ inline char& String<T>::at(size_t pos)
 	try
 	{
 		if (pos > size)
-			throw ExceptionStr(5, "Error!Out of Range\n");
+			throw ExceptionStr(OUT_OF_RANGE, "Error!Out of Range\n");
 		return this->str[pos];
 	}
 	catch(ExceptionStr exp)
@@ -668,11 +707,10 @@ inline char& String<T>::at(size_t pos)
 template<typename T>
 void String<T>::swap(String<T>& str)
 {
-	char* ptemp = this->str;
-	this->str = str.Str;
-	this->size = str.size;
-	str.str = ptemp;
-	str.size = strlen(ptemp);
+	std::swap(size, str.size);
+	char *pc = move(str.str);
+	str.str = move(this->str);
+	this->str = pc;
 }
 //String resize
 template<typename T>
@@ -681,7 +719,7 @@ String<T>& String<T>::Resize(int n)
 	try
 	{
 		if (n < 0 || this->str == nullptr)
-			throw ExceptionStr(4, "Your number is smaller null!\n");
+			throw ExceptionStr(SMALL_NUM, "Your number is smaller null!\n");
 		String TempStr;
 		int OrigSize = this->size, count = size;
 		TempStr.str = new T[n + 1]; //Allocating memory for a temporary string that will store the result
@@ -782,7 +820,7 @@ String<T>& String<T>::pop_back()
 	try
 	{
 		if (this->size == 0)
-			throw ExceptionStr(1, "Your string size = 0!");
+			throw ExceptionStr(SIZE, "Your string size = 0!");
 	}
 	catch (ExceptionStr exp)
 	{
@@ -825,7 +863,7 @@ String<T>& String<T>::Pop_front()
 	try
 	{
 		if (this->size == 0 || str == nullptr)
-			throw ExceptionStr(2, "Your size string is smaller 0 or = 0\n");
+			throw ExceptionStr(SIZE, "Your size string is smaller 0 or = 0\n");
 		String result(this->str);
 		result.size = size;
 		delete[]this->str;
@@ -845,7 +883,7 @@ String<T>& String<T>::Pop_front()
 //returns a substring of the given string starting at the character at index pos count
 //count or to the end of the string if pos + count > S.size().
 template<typename T>
-String<T> String<T>::SubStr(size_t pos, short int count)
+String<T> String<T>::SubStr(size_t pos, int count)const
 {
 	if (pos == Size())
 	{
@@ -983,6 +1021,7 @@ String<T>& String<T>::Erase(size_t index, size_t num)
 template<typename T>
 inline String<T>& String<T>::assign(const String<T>& s, size_t st, size_t num)
 {
+	
 	if (this->size != 0 || this->str != nullptr)
 		delete[]str;
 	size_t size = num;
@@ -1046,7 +1085,7 @@ String<T>& String<T>::assign(const String<T>& str)
 	position of the very first character
 		which matches*/
 template<typename T>
-size_t String<T>::find(const char* const str)
+size_t String<T>::find(const char* str)
 {
 	size_t result = 0, j = 0, q = 0;
 	for (int i = 0; i < size; i++)
@@ -1255,7 +1294,7 @@ size_t String<T>::find(const char* const str, size_t pos)
 	try
 	{
 		if (pos > size || size == 0 || this->str == nullptr)
-			throw ExceptionStr(2, "Your string size == 0 or position find is bigger than length");
+			throw ExceptionStr(SIZE, "Your string size == 0 or position find is bigger than length");
 		size_t result = 0, j = 0, q = 0;
 		for (int i = pos; i < size; i++)
 		{
@@ -1294,7 +1333,6 @@ size_t String<T>::find(const char* const str, size_t pos, size_t n)
 		return j - result + 1;
 	else
 		return 0;
-
 }
 /*Getter for a string, returns the string it is asking for
 	user*/
@@ -1328,7 +1366,7 @@ inline const char& String<T>::back()
 	try
 	{
 		if (size == 0 || this->str == nullptr)
-			throw ExceptionStr(3, "Your string length == 0 or string = nullptr");
+			throw ExceptionStr(SIZE, "Your string length == 0 or string = nullptr");
 		return this->Str[size - 1];
 	}
 	catch (ExceptionStr exp)
@@ -1434,4 +1472,20 @@ inline String<T>& String<T>::reverse()
 		str[i] = str[i] - str[size - i - 1];
 	}
 	return *this;
+}
+template<typename T>
+inline size_t String<T>::rfind(const char* str, size_t pos)
+{
+	int n = String::find(str,pos);
+	int temp;
+	while (n > 0)
+	{
+		temp = n;
+		n = String::find(str, n + 1);
+		if (n > 0)
+			temp = n;
+		else
+			break;
+	}
+	return temp;
 }

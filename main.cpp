@@ -5,8 +5,7 @@
 
 int main()
 {
-	sstring base = "siht";
-	base.reverse();
-	cout << base;
+
+	
 	return 0;
 }
