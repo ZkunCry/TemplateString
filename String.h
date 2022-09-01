@@ -717,67 +717,34 @@ String<T>& String<T>::Pop_front()
 template<typename T>
 String<T> String<T>::SubStr(size_t pos, int count)const
 {
-	if (pos == Size())
-	{
-		String TempStr;
-		return TempStr;
-	}
 	/*If the number of characters to be copied, starting from pos, exceeds the length of the original string,
 	then in this case you will need to copy from pos to the end of the line
 	If the number of characters to be copied, starting from pos, does not exceed the length of the original string,
 	Then the string is copied from pos to count*/
-	if (count < this->size && pos != 0 && count != Npos)
-	{
-		String TempStr;
-		size_t j = 0;
-		TempStr.size = count;
-		TempStr.str = new T[count + 1]; /*In this case, memory allocation is simple:
+
+	if(pos <size  || count == Npos ||pos >0 && count >0)
+	{ 
+		if (count == Npos || count >size)
+			count = size-pos;
+	String TempStr;
+	size_t j = 0;
+	/*if (pos > 0) pos--;*/
+	TempStr.size = count;
+	/*pos++;*/
+	TempStr.str = new T[TempStr.size+1]; /*In this case, memory allocation is simple:
 				Starting from position pos (including it), characters up to count are copied,
 				in this case, it would be rational to take the count of copied characters and use as
 				line size*/
-		for (size_t i = pos; i < count + pos; j++, i++)
-		{
-			TempStr[j] = this->str[i];
-		}
-		TempStr[count] = '\0';
-		return TempStr;
-	}
-	else if (count > this->size && pos != 0 && count != Npos)
+	for (size_t i = pos; i < count+pos; j++, i++)
 	{
-		String TempStr;
-		int j = 0;
-		TempStr.size = size - pos;
-		TempStr.str = new T[(this->size - pos) + 1];
-		for (int i = pos; i < size; j++, i++)
-		{
-			TempStr[j] = this->str[i];
-		}
-		TempStr[size - pos] = '\0';
-		return TempStr;
+		TempStr[j] = this->str[i];
 	}
-	else if (pos == 0 && count == 0 || pos > 0 && count == 0)
-	{
-		String TempStr;
-		return TempStr;
+	TempStr[count] = '\0';
+	return TempStr;
 	}
-	if (pos == 0 && count > 0)
+	else 
 	{
-		String TempStr;
-		size_t j = 0, n = (count);
-		TempStr.size = n;
-		TempStr.str = new T[n + 1];
-		for (int i = pos; i < n; j++, i++)
-		{
-			TempStr[j] = this->str[i];
-		}
-		TempStr[n] = '\0';
-		return TempStr;
-	}
-	if (pos > 0 && count == Npos)
-	{
-		String s(str);
-		s.Erase(0, pos);
-		return s;
+		return String();
 	}
 }
 //Removing characters from a string starting at position

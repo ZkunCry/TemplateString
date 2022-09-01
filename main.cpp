@@ -6,9 +6,6 @@
 int main()
 {
 	sstring s1("this");
-	sstring::const_iterator it = s1.cbegin();
-	sstring::const_iterator it2 = s1.cend();
-	s1.Replace(it, it2,"apple");
-	cout << s1;
+	cout<<s1.SubStr(3,2);
 	return 0;
 }
