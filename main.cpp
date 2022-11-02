@@ -5,7 +5,9 @@
 
 int main()
 {
-	sstring s1("this");
-	cout<<s1.SubStr(3,2);
+	const sstring s1("this");
+	cout<<s1.SubStr(0)<<endl;
+
+
 	return 0;
 }

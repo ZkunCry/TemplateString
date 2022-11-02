@@ -15,20 +15,6 @@ class Iterator;
 template<typename T>
 class Reverse_Iterator;
 
-enum Errors
-{
-	SIZE,
-	OUT_OF_RANGE,
-	SMALL_NUM
-};
-class Exception // Abstract exception class(Base Class)
-{
-protected:
-	size_t num;
-	char* str;
-public:
-	virtual void display() = 0; //Virtual abstract method
-};
 
 template<typename T>
 class String
@@ -41,15 +27,6 @@ private:
 	size_t size;
 	void assignment(char* pc, const String& other);
 	//helper method
-
-	class ExceptionStr :public Exception //Derived class
-	{
-	public:
-		ExceptionStr(size_t Num, const char* string);
-		void display()override;
-	};
-
-
 public:
 	//Classes Iterators
 	typedef Iterator<T> iterator;
@@ -59,7 +36,7 @@ public:
 	//////
 	//  
 	//String Constructors and Destructor
-	static const int Npos = -1;
+	static const size_t Npos = -1;
 	String(const String& other);
 	String(String&& other) noexcept; //Move konstructor
 	String();
@@ -108,13 +85,13 @@ public:
 	const char* c_str() const;
 	String& Resize(int n);
 	String& Resize(short int n, char symbol);
-	String SubStr(size_t pos = 0, int count = Npos)const;
+	String SubStr(size_t pos = 0, size_t count = Npos)const;
 	String& Push_back(const char c);
 	String& pop_back();
 	String& Push_front(const char c);
 	String& Pop_front();
 	String& Erase(int position);
-	String& Erase(size_t index = 0, size_t num = 0);
+	String& Erase(size_t index = 0, size_t num = Npos);
 	void isClear();
 	String& lower(size_t start, size_t end);
 	String& upper(size_t start, size_t end);
@@ -148,7 +125,7 @@ public:
 	int compare(size_t start, size_t num, const char* s) const;
 	int compare(const String& s) const noexcept;
 	int compare(const char *s) const;
-	void readfile(const char *nameF);
+	void readfile(const char *nameF,int choose);
 	void writefile(const char* nameF);
 	//Functions that return a reference to the first and last object of a string
 	constexpr char& front();
@@ -197,20 +174,7 @@ String<T>::const_iterator String<T>::cend() const
 	return const_iterator(str + size);
 }
 /////////
-//Derived Class ExceptionStr
-template<typename T>
-inline String<T>::ExceptionStr::ExceptionStr(size_t Num, const char* string)
-{
-	this->num = Num;
-	str = new char[strlen(string) + 1];
-	strncpy(str, string, strlen(string));
-	str[strlen(string)] = '\0';
-}
-template<typename T>
-void String<T>::ExceptionStr::display()
-{
-	std::cout << "Exception! - # " << num << " " << str << std::endl;
-}
+
 //////////
 /// Class Iterator(Const) and Reverse Iterator
 
@@ -527,12 +491,14 @@ inline char& String<T>::at(size_t pos)
 	try
 	{
 		if (pos > size)
-			throw ExceptionStr(OUT_OF_RANGE, "Error!Out of Range\n");
+		{
+			throw exception("Error!Out of Range\n");
+		}
 		return this->str[pos];
 	}
-	catch(ExceptionStr exp)
+	catch(exception exp)
 	{
-		exp.display();
+		exp.what();
 	}
 }
 //The function changes the contents of the strings
@@ -551,7 +517,7 @@ String<T>& String<T>::Resize(int n)
 	try
 	{
 		if (n < 0 || this->str == nullptr)
-			throw ExceptionStr(SMALL_NUM, "Your number is smaller null!\n");
+			throw exception("Your number is smaller null!\n");
 		String TempStr;
 		int OrigSize = this->size, count = size;
 		TempStr.str = new T[n + 1]; //Allocating memory for a temporary string that will store the result
@@ -575,9 +541,9 @@ String<T>& String<T>::Resize(int n)
 		this->str[size] = '\0';
 		return *this; // We return as a result the object that needed to be changed
 	}
-	catch (ExceptionStr exp)
+	catch (exception exp)
 	{
-		exp.display();
+		exp.what();
 		return *this;
 	}
 }
@@ -652,11 +618,11 @@ String<T>& String<T>::pop_back()
 	try
 	{
 		if (this->size == 0)
-			throw ExceptionStr(SIZE, "Your string size = 0!");
+			throw exception("Your string size = 0!");
 	}
-	catch (ExceptionStr exp)
+	catch (exception &exp)
 	{
-		exp.display();
+		exp.what();
 		return *this;
 	}
 	if (this->size != 0 )
@@ -695,7 +661,7 @@ String<T>& String<T>::Pop_front()
 	try
 	{
 		if (this->size == 0 || str == nullptr)
-			throw ExceptionStr(SIZE, "Your size string is smaller 0 or = 0\n");
+			throw exception("Your size string is smaller 0 or = 0\n");
 		String result(this->str);
 		result.size = size;
 		delete[]this->str;
@@ -706,26 +672,26 @@ String<T>& String<T>::Pop_front()
 		str[size] = '\0';
 		return *this;
 	}
-	catch (ExceptionStr ex)
+	catch (exception& ex)
 	{
-		ex.display();
+		ex.what();
 		return *this;
 	}
 }
 //returns a substring of the given string starting at the character at index pos count
 //count or to the end of the string if pos + count > S.size().
 template<typename T>
-String<T> String<T>::SubStr(size_t pos, int count)const
+String<T> String<T>::SubStr(size_t pos, size_t count)const
 {
 	/*If the number of characters to be copied, starting from pos, exceeds the length of the original string,
 	then in this case you will need to copy from pos to the end of the line
 	If the number of characters to be copied, starting from pos, does not exceed the length of the original string,
 	Then the string is copied from pos to count*/
 
-	if(pos <size  || count == Npos ||pos >0 && count >0)
+	if((int)pos <size  || (int)count == Npos ||(int)pos >0 && (int)count >0)
 	{ 
 		if (count == Npos || count >size)
-			count = size-pos;
+			count = size-(int)pos;
 	String TempStr;
 	size_t j = 0;
 	/*if (pos > 0) pos--;*/
@@ -739,9 +705,11 @@ String<T> String<T>::SubStr(size_t pos, int count)const
 	{
 		TempStr[j] = this->str[i];
 	}
+
 	TempStr[count] = '\0';
 	return TempStr;
 	}
+
 	else 
 	{
 		return String();
@@ -784,7 +752,7 @@ inline String<T> &String<T>::Erase(int position)
 template<typename T>
 String<T>& String<T>::Erase(size_t index, size_t num)
 {
-	if (index != 0 && num != 0 && size != 0 || index == 0 && num > 0)
+	if (index != 0 && (int)num != 0 && size != 0 || index == 0 && (int)num > 0)
 	{
 		String<T> Temp;
 		size_t j = 0;
@@ -809,7 +777,7 @@ String<T>& String<T>::Erase(size_t index, size_t num)
 		str[n] = '\0';
 		return *this;
 	}
-	else if (index == 0 && num == 0)
+	else if (index == 0 && (int)num == 0)
 	{
 		this->str[0] = '\0';
 		this->size = 0;
@@ -1095,7 +1063,7 @@ size_t String<T>::find(const char* const str, size_t pos)
 	try
 	{
 		if (pos > size || size == 0 || this->str == nullptr)
-			throw ExceptionStr(SIZE, "Your string size == 0 or position find is bigger than length");
+			throw exception( "Your string size == 0 or position find is bigger than length");
 		size_t result = 0, j = 0, q = 0;
 		for (int i = pos; i < size; i++)
 		{
@@ -1111,9 +1079,9 @@ size_t String<T>::find(const char* const str, size_t pos)
 		else
 			return 0;
 	}
-	catch (ExceptionStr exp)
+	catch (exception &exp)
 	{
-		exp.display();
+		exp.what();
 		return NULL;
 	}
 }
@@ -1167,12 +1135,12 @@ inline const char& String<T>::back()
 	try
 	{
 		if (size == 0 || this->str == nullptr)
-			throw ExceptionStr(SIZE, "Your string length == 0 or string = nullptr");
+			throw exception("Your string length == 0 or string = nullptr");
 		return this->Str[size - 1];
 	}
-	catch (ExceptionStr exp)
+	catch (exception & exp)
 	{
-		exp.display();
+		exp.what();
 	}
 }
 
@@ -1216,26 +1184,18 @@ inline String<T>& String<T>::To_string(T2 n)
 	return *this;
 }
 template<typename T>
-inline void String<T>::readfile(const char *nameF)
+inline void String<T>::readfile(const char *nameF,int choose)
 {
 	ifstream file(nameF, ios::in | ios::binary);
-	if (file.is_open())
-		cout << "File is open!\n";
+	if (file.is_open()){}
 	else
 	{
-		cout << "File isn't open!\n";
-		return;
+		return NULL;
 	}
 	char buf[255];
-	
-	cout << "reading data from a file...\n";
 	file.getline(buf, 100);
 	file.seekg(0, ios_base::end);
-	cout << "Size of file:\n" << file.tellg();
 	file.close();
-	cout << "Do you want to overwrite your row data or display?\n";
-	int choose;
-	cin >> choose;
 	if (choose == 1)
 	{
 		delete[]str;
@@ -1251,16 +1211,21 @@ inline void String<T>::readfile(const char *nameF)
 template<typename T>
 inline void String<T>::writefile(const char* nameF)
 {
-	if (str != nullptr || size != 0)
+	ofstream file;
+	bool check = file(nameF, ios::out || ios::binary);
+	try
 	{
-		ofstream file (nameF, ios::out || ios::binary);
-		if (file.is_open())
-			cout << "File is open!\n";
-		else
-			cout << "File isn't open!\n";
+		if (str == nullptr || size == 0 || !check)
+		{
+			throw exception("Exception! Memory hasn't been allocated or file was not found\n");
+		}
 		file.write(str, size);
-		cout << "Saving data was successful.\n";
 		file.close();
+	}
+	catch (exception& exp)
+	{
+		exp.what();
+		return NULL;
 	}
 }
 template<typename T>
@@ -1277,7 +1242,7 @@ inline String<T>& String<T>::reverse()
 template<typename T>
 inline size_t String<T>::rfind(const char* str, size_t pos)
 {
-	int n = String::find(str,pos);
+	int n = String::find(str,(int)pos);
 	int temp;
 	while (n > 0)
 	{
