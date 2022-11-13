@@ -5,7 +5,6 @@ template<typename T>
 class Iterator // Base Class
 {
 public:
-
 	using iterator_category = std::forward_iterator_tag;
 	using difference_type = std::ptrdiff_t;
 	using value_type = T;

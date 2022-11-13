@@ -6,7 +6,9 @@
 #include <string.h>
 #include <typeinfo>
 #include <fstream>
+#include <sstream>
 #include "iterators.h"
+#include "Allocator.h"
 using namespace std;
 
 
@@ -25,9 +27,13 @@ private:
 	//Class string fields
 	pointer_str str;
 	size_t size;
+	size_t capacity;
+	size_t count_capacity;
 	void assignment(char* pc, const String& other);
-	//helper method
+	
 public:
+	
+	Allocator<T> allocator;
 	//Classes Iterators
 	typedef Iterator<T> iterator;
 	typedef Iterator<const T> const_iterator;
@@ -41,6 +47,7 @@ public:
 	String(String&& other) noexcept; //Move konstructor
 	String();
 	String(const char* str);
+	String(const wchar_t* str);
 	String(char symbol);
 	String(size_t n, char symbol);
 	String(int n);
@@ -139,9 +146,11 @@ public:
 	reverse_iterator rend()const;
 	const_reverse_iterator rcbegin()const;
 	const_reverse_iterator rcend()const;
+
 };
 
 using sstring = String<char>; // This typedef is needed in order not to write many times String<char> and Iterators<char>
+
 template<typename T>
 inline String<T>::iterator String<T>::begin()const
 {
@@ -198,59 +207,86 @@ inline String<T>::reverse_iterator String<T>::rend() const
 template<typename T>
 inline String<T>::String(const char* ps, size_t count)
 {
-	this->str = new T[count + 1];
+	this->str = allocator.allocate(count+1);
+	for(int i =0;i<count;i++)
+		allocator.construct(str+i, ps[i]);
 	size = count;
-	strncpy(str, ps, size);
 	str[size] = 0;
 }
 template<typename T>
 inline String<T>::String(const String& other, size_t pos, size_t count)
 {
-	this->str = new T[count - pos+1];
+	this->str = allocator.allocate((count - pos)+1);
 	this->size = count - pos;
-	strncpy(str, other.str, size);
+	for (int i = 0; i < size; i++)
+		allocator.construct(str + i, other[i]);
 	str[size] = 0;
 }
 template<typename T>
 String<T>::String()
 {
-	this->str = new T[1];
+	this->str = nullptr;
 	this->size = 0;
-	this->str[0] = '\0';
 }
 template<typename T>
-String<T>::String(const char* str)
+String<T>:: String(const char* str)
 {
-	size = strlen(str);
-	this->str = new T[size + 1];
-	strncpy(this->str, str, size);
+	int count = 0, i = 0;
+	while (str[i] != 0)
+	{
+		count++;
+		i++;
+	}
+	size = count;
+	this->str = allocator.allocate(size+1);
+	for (int i = 0; i < size; i++)
+		allocator.construct(this->str + i, str[i]);
 	this->str[size] = '\0';
 }
+
+template<typename T>
+inline String<T>::String(const wchar_t* str)
+{
+	int count = 0, i = 0;
+	while (str[i] != 0)
+	{
+		count++;
+		i++;
+	}
+	size = count;
+	this->str = new T[size + 1];
+	for (int i = 0; i < size; i++)
+		this->str[i] = str[i];
+	this->str[size] = '\0';
+}
+
 template<typename T>
 String<T>::String(const String<T>& other) :String(other.str) {}
+
 template<typename T>
-String<T>::String(String<T>&& other)noexcept :String()
+String<T>::String(String<T>&& other)noexcept
 {
-	swap(other);
+	this->str = other.str;
+	this->size = other.size;
+	other.str = nullptr;
+	other.size = 0;
 }
 template<typename T>
 String<T>::String(char symbol)
 {
-	this->str = new T[2];
-	this->str[0] = symbol;
-	this->str[1] = '\0';
-	this->size = 1;
+	str = allocator.allocate(2);
+	size= 1;
+	allocator.construct(str, symbol);
+	str[size] = 0;
 }
 template<typename T>
 String<T>::String(size_t n, char symbol)
 {
 	this->str = new T[n + 1];
 	for (int i = 0; i < n; i++)
-	{
-		this->str[i] = symbol;
-	}
+		allocator.construct(str + i, symbol);
 	this->str[n] = '\0';
-	this->size = strlen(this->str);
+	this->size = n;
 }
 template<typename T>
 String<T>::String(int n)
@@ -262,7 +298,7 @@ String<T>::~String() noexcept
 {
 	if (str != nullptr)
 	{
-		delete[]this->str;
+		allocator.deallocate(str, size);
 		this->size = 0;
 	}
 }
@@ -270,21 +306,21 @@ String<T>::~String() noexcept
 template<typename T>
 size_t String<T>::Size()const
 {
-	return strlen(str);
+	return size;
 }
 template<typename T>
 String<T> String<T>::operator+(const String<T>& other)
 {
-	String s;
-	size_t count = strlen(this->str) + strlen(other.str);
-	s.str = new T[count + 1];
+	String<T> s;
+	size_t count = this->size + other.size;
+	s.str = allocator.allocate(count + 1);
 	s.size = count;
 	int i = 0;
 	for (; i < size; i++)
-		s[i] = this->str[i];
+		allocator.construct(s.str + i, str[i]);
 	for (int j = 0; j < other.size; j++, i++)
-		s[i] = other[j];
-	s.str[count] = '\0';
+		allocator.construct(s.str+i,other[j]);
+	s[count] = '\0';
 	s.size = count;
 	return s;
 }
@@ -398,11 +434,22 @@ inline const bool String<T>::operator!=(const String<T>& other)const
 template<typename T>
 String<T>& String<T>::operator =(const String<T>& other)
 {
-	if (this->str != nullptr)
-		delete[] this->str;
-	this->size = strlen(other.str);
-	this->str = new T[size + 1];
-	strncpy(str, other.str, size);
+	if (this->str)
+		allocator.deallocate(this->str,size);
+	int count = 0, i = 0;
+	while (other.str[i] != 0)
+	{
+		count++;
+		i++;
+	}
+	i = 0;
+	this->size = count;
+	this->str = allocator.allocate(size+1);
+	while (other[i] != 0)
+	{
+		allocator.construct(str+i,other[i]);
+		i++;
+	}
 	this->str[size] = '\0';
 	return *this;
 }
@@ -410,20 +457,32 @@ template<typename T>
 String<T>& String<T>::operator=(const char* s)
 {
 	if (this->str != nullptr)
-		delete[]this->str;
-	size = strlen(s);
-	str = new T[size + 1];
-	strncpy(str, s, size);
+		allocator.deallocate(this->str,size);
+	int count = 0, i = 0;
+	while (s[i] != 0)
+	{
+		count++;
+		i++;
+	}
+	i = 0;
+	size = count;
+	str = allocator.allocate(size + 1);
+	while (s[i] != 0)
+	{
+		allocator.construct(str+i,s[i]);
+		i++;
+	}
 	str[size] = '\0';
 	return *this;
 }
 template<typename T>
 String<T>& String<T>::operator=(char c)
 {
-	delete[]this->str;
+	if(this->str)
+		delete[]this->str;
 	size = 1;
-	str = new T[size + 1];
-	str[size - 1] = c;
+	str = allocator.allocate(size + 1);
+	allocator.construct(str, c);
 	str[size] = '\0';
 	return *this;
 }
@@ -498,17 +557,16 @@ inline char& String<T>::at(size_t pos)
 	}
 	catch(exception exp)
 	{
-		exp.what();
+		cout<<exp.what();
 	}
 }
 //The function changes the contents of the strings
 template<typename T>
 void String<T>::swap(String<T>& str)
 {
+	
 	std::swap(size, str.size);
-	char *pc = move(str.str);
-	str.str = move(this->str);
-	this->str = pc;
+	std::swap(this->str, str.str);
 }
 //String resize
 template<typename T>
@@ -541,9 +599,9 @@ String<T>& String<T>::Resize(int n)
 		this->str[size] = '\0';
 		return *this; // We return as a result the object that needed to be changed
 	}
-	catch (exception exp)
+	catch (exception &exp)
 	{
-		exp.what();
+		cout<<exp.what();
 		return *this;
 	}
 }
@@ -587,29 +645,18 @@ String<T>& String<T>::Resize(short int n, char symbol)
 template<typename T>
 String<T>& String<T>::Push_back(const char c)
 {
-	if (this->str != nullptr)
-	{
-		String TempStr;
-		size_t n = this->size + 1;
-		TempStr.str = new T[this->size + 2];
-		for (int i = 0; i < this->size + 1; i++)
-		{
-			if (i == n - 1)
-				TempStr[i] = c;
-			else
-				TempStr[i] = this->str[i];
-		}
-		TempStr.str[n] = '\0';
-		delete[]this->str;
-		this->size = n;
-		this->str = new T[n + 2];
-		for (int i = 0; TempStr[i] != '\0'; i++)
-		{
-			this->str[i] = TempStr[i];
-		}
-		this->str[n] = '\0';
-		return *this;
-	}
+	T* tempstr = allocator.allocate(size+1);
+	memcpy(tempstr, str, size+1);
+	allocator.deallocate(this->str,size);
+	str = allocator.allocate(size + 2);
+	for (int i = 0; i < size; i++)
+		allocator.construct(str + i, tempstr[i]);
+	allocator.construct(str + size, c);
+	size++;
+	str[size] = 0;
+	
+	return *this;
+	
 }
 //Removing an element at the end of a line
 template<typename T>
@@ -664,8 +711,8 @@ String<T>& String<T>::Pop_front()
 			throw exception("Your size string is smaller 0 or = 0\n");
 		String result(this->str);
 		result.size = size;
-		delete[]this->str;
-		str = new T[size];
+		allocator.deallocate(str, size);
+		str = allocator.allocate(size);
 		for (int i = 0, j = 1; i < size; i++, j++)
 			str[i] = result[j];
 		size = result.size - 1;
@@ -674,7 +721,7 @@ String<T>& String<T>::Pop_front()
 	}
 	catch (exception& ex)
 	{
-		ex.what();
+		cout<<ex.what();
 		return *this;
 	}
 }
@@ -939,25 +986,25 @@ String<T>& String<T>::append(const String<T>& other, size_t start, size_t end)
 	TempStr.size = size;
 	String resultOther;
 	int j = 0;
-	resultOther.str = new T[end + 1];
+	resultOther.str = allocator.allocate(end + 1);
 	resultOther.size = end;
 	for (int i = start; j < end; j++, i++)
-		resultOther[j] = other[i];
+		allocator.construct(resultOther.str + j, other[i]);
 
 	resultOther[end] = '\0';
 
-	TempStr.str = new T[this->size + 1];
+	TempStr.str = allocator.allocate(size + 1); 
 
 	for (int i = 0; i < size; i++)
-		TempStr[i] = this->str[i];
+		allocator.construct(TempStr.str + i, str[i]);
 	TempStr[size] = '\0';
 	TempStr = TempStr + resultOther;
 	for (int i = 0; i < size; i++)
-		TempStr[i] = this->str[i];
-	this->str = new T[TempStr.Size() + 1];
+		allocator.construct(TempStr.str + i, str[i]); 
+	this->str = allocator.allocate(TempStr.Size() + 1); 
 	size = TempStr.size;
 	for (int i = 0; i < TempStr.Size(); i++)
-		this->str[i] = TempStr[i];
+		allocator.construct(str+i, TempStr[i]); 
 	this->str[TempStr.size] = '\0';
 	return *this;
 }
@@ -966,10 +1013,11 @@ String<T>& String<T>::append(const String<T>& str)
 {
 	String temp(this->str);
 	temp = temp + str;
-	delete[]this->str;
+	allocator.deallocate(this->str, size);
 	size = temp.size;
-	this->str = new T[size + 1];
-	strncpy(this->str, temp.str, size);
+	this->str = allocator.allocate(size + 1);
+	for (int i = 0; i < size; i++)
+		allocator.construct(this->str + i, temp[i]);
 	this->str[size] = '\0';
 	return *this;
 }
@@ -979,10 +1027,11 @@ String<T>& String<T>::append(size_t n, char c)
 	String temp(str);
 	for (int i = 0; i < n; i++)
 		temp.Push_back(c);
-	delete[]this->str;
-	str = new T[temp.size + 1];
+	allocator.deallocate(str, size);
 	size = temp.size;
-	strncpy(str, temp.str, temp.size);
+	str =allocator.allocate(size + 1);
+	for (int i = 0; i < size; i++)
+		allocator.construct(str + i, temp.str[i]);
 	str[size] = '\0';
 	return *this;
 }
@@ -1063,7 +1112,7 @@ size_t String<T>::find(const char* const str, size_t pos)
 	try
 	{
 		if (pos > size || size == 0 || this->str == nullptr)
-			throw exception( "Your string size == 0 or position find is bigger than length");
+			throw exception( "Exception! Your string size == 0 or position find is bigger than length");
 		size_t result = 0, j = 0, q = 0;
 		for (int i = pos; i < size; i++)
 		{
@@ -1125,6 +1174,8 @@ inline bool String<T>::isEmpty()
 template<typename T>
 inline void String<T>::isClear()
 {
+	allocator.deallocate(str, size);
+	str = allocator.allocate(1);
 	str[0] = '\0';
 	this->size = 0;
 }
@@ -1140,7 +1191,7 @@ inline const char& String<T>::back()
 	}
 	catch (exception & exp)
 	{
-		exp.what();
+		cout<<exp.what();
 	}
 }
 
@@ -1168,19 +1219,13 @@ template<typename T>
 template<typename T2>
 inline String<T>& String<T>::To_string(T2 n)
 {
-	char* buf = new char[10000];
-	if(strcmp(typeid(n).name(),"double") == 0)
-		sprintf(buf, "%lf", n);
-	else if(strcmp(typeid(n).name(), "int") == 0)
-		sprintf(buf, "%d", n);
-	else 
-		sprintf(buf, "%s", n);
-	delete[]str;
-	size = strlen(buf);
-	str = new T[size + 1];
-	strncpy(str, buf,size);
-	str[size] = '\0';
-	delete[]buf;
+	std::ostringstream oss1;
+	oss1 << n;
+	allocator.deallocate(str, size);
+	size = oss1.str().size();
+	str = allocator.allocate(size+1);
+	for (int i = 0; i < size+1; i++)
+		allocator.construct(str + i, oss1.str()[i]);
 	return *this;
 }
 template<typename T>
@@ -1190,7 +1235,7 @@ inline void String<T>::readfile(const char *nameF,int choose)
 	if (file.is_open()){}
 	else
 	{
-		return NULL;
+		return;
 	}
 	char buf[255];
 	file.getline(buf, 100);
@@ -1198,34 +1243,33 @@ inline void String<T>::readfile(const char *nameF,int choose)
 	file.close();
 	if (choose == 1)
 	{
-		delete[]str;
-		str = new T[strlen(buf) + 1];
+		allocator.deallocate(str, size);
+		str = allocator.allocate(strlen(buf) + 1);
 		size = strlen(buf);
-		strncpy(str, buf, size);
-		str[size] = 0;
+		for (int i = 0; i < size+1; i++)
+			allocator.construct(str + i, buf[i]);
 	}
 	else if (choose == 2)
-		cout << buf;
+		cout << buf<<endl;
 }
 
 template<typename T>
 inline void String<T>::writefile(const char* nameF)
 {
-	ofstream file;
-	bool check = file(nameF, ios::out || ios::binary);
+	ofstream file(nameF, ios::out || ios::binary);
 	try
 	{
-		if (str == nullptr || size == 0 || !check)
+		file.is_open();
+		if (str == nullptr || size == 0 )
 		{
 			throw exception("Exception! Memory hasn't been allocated or file was not found\n");
 		}
-		file.write(str, size);
+		file.write(str,size);
 		file.close();
 	}
 	catch (exception& exp)
 	{
-		exp.what();
-		return NULL;
+		cout<<exp.what();
 	}
 }
 template<typename T>
@@ -1255,3 +1299,5 @@ inline size_t String<T>::rfind(const char* str, size_t pos)
 	}
 	return temp;
 }
+
+
