@@ -5,9 +5,8 @@
 void main()
 {
 	
-	sstring str("aaa"),str2("fdfd");
-	str.To_string(342432);
+	sstring str;
 	str.Pop_front();
-	cout << str;
 
+	
 }

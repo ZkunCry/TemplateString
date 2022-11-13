@@ -29,11 +29,12 @@ private:
 	size_t size;
 	size_t capacity;
 	size_t count_capacity;
+	Allocator<T> allocator;
 	void assignment(char* pc, const String& other);
 	
 public:
 	
-	Allocator<T> allocator;
+	
 	//Classes Iterators
 	typedef Iterator<T> iterator;
 	typedef Iterator<const T> const_iterator;
@@ -551,13 +552,13 @@ inline char& String<T>::at(size_t pos)
 	{
 		if (pos > size)
 		{
-			throw exception("Error!Out of Range\n");
+			throw out_of_range("String<T>::at ");
 		}
 		return this->str[pos];
 	}
-	catch(exception exp)
+	catch(const std::out_of_range& oor)
 	{
-		cout<<exp.what();
+		cerr<<"Out of Range error: " << oor.what()<<endl;
 	}
 }
 //The function changes the contents of the strings
@@ -575,7 +576,7 @@ String<T>& String<T>::Resize(int n)
 	try
 	{
 		if (n < 0 || this->str == nullptr)
-			throw exception("Your number is smaller null!\n");
+			throw out_of_range("String<T>::Resize ");
 		String TempStr;
 		int OrigSize = this->size, count = size;
 		TempStr.str = new T[n + 1]; //Allocating memory for a temporary string that will store the result
@@ -599,9 +600,9 @@ String<T>& String<T>::Resize(int n)
 		this->str[size] = '\0';
 		return *this; // We return as a result the object that needed to be changed
 	}
-	catch (exception &exp)
+	catch (const std::out_of_range &exp)
 	{
-		cout<<exp.what();
+		cerr<<"Out of Range: " << exp.what()<<endl;
 		return *this;
 	}
 }
@@ -665,11 +666,11 @@ String<T>& String<T>::pop_back()
 	try
 	{
 		if (this->size == 0)
-			throw exception("Your string size = 0!");
+			throw length_error("String<T>::pop_back ");
 	}
 	catch (exception &exp)
 	{
-		exp.what();
+		cerr<<"Length error: " << exp.what()<<endl;
 		return *this;
 	}
 	if (this->size != 0 )
@@ -690,16 +691,28 @@ String<T>& String<T>::pop_back()
 template<typename T>
 String<T>& String<T>::Push_front(const char c)
 {
-	String temp(c);
-	String result(this->str);
-	temp += result;
-	delete[]str;
-	str = new T[temp.size + 1];
-	for (int i = 0; i < temp.size; i++)
-		str[i] = temp[i];
-	size = temp.size;
-	str[temp.size] = '\0';
-	return *this;
+	try
+	{
+		if (!this->str)
+		{
+			throw bad_alloc();
+		}
+		String temp(c);
+		String result(this->str);
+		temp += result;
+		delete[]str;
+		str = new T[temp.size + 1];
+		for (int i = 0; i < temp.size; i++)
+			str[i] = temp[i];
+		size = temp.size;
+		str[temp.size] = '\0';
+		return *this;
+	}
+	catch (const std::bad_alloc& alloc)
+	{
+		cerr << "Bad alloc error: " << alloc.what()<<" String<T>::Push_front" << endl;
+		return *this;
+	}
 
 }
 template<typename T>
@@ -707,8 +720,10 @@ String<T>& String<T>::Pop_front()
 {
 	try
 	{
-		if (this->size == 0 || str == nullptr)
-			throw exception("Your size string is smaller 0 or = 0\n");
+		if (this->size == 0)
+			throw length_error("String<T>::Pop_front");
+		if (!this->str)
+			throw bad_alloc();
 		String result(this->str);
 		result.size = size;
 		allocator.deallocate(str, size);
@@ -719,9 +734,14 @@ String<T>& String<T>::Pop_front()
 		str[size] = '\0';
 		return *this;
 	}
-	catch (exception& ex)
+	catch (const bad_alloc& ba)
 	{
-		cout<<ex.what();
+		cerr<<"Bad alloc error: " << ba.what()<<" String<T>::Pop_front "<<endl;
+		return *this;
+	}
+	catch (const length_error& le)
+	{
+		cerr << "Length error: " << le.what() << endl;
 		return *this;
 	}
 }
@@ -1130,7 +1150,7 @@ size_t String<T>::find(const char* const str, size_t pos)
 	}
 	catch (exception &exp)
 	{
-		exp.what();
+		cerr<<exp.what();
 		return NULL;
 	}
 }
@@ -1191,7 +1211,7 @@ inline const char& String<T>::back()
 	}
 	catch (exception & exp)
 	{
-		cout<<exp.what();
+		cerr<<exp.what();
 	}
 }
 

@@ -102,3 +102,11 @@ inline void Allocator<T>::deallocate(pointer p, size_type num)
 {
 	::operator delete((void*)p);
 }
+template<typename T,typename T2>
+inline bool operator ==(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
+	return true;
+}
+template<typename T, typename T2>
+inline bool operator !=(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
+	return false;
+}
