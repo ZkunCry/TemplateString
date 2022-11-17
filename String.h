@@ -47,42 +47,43 @@ public:
 	String(const String& other);
 	String(String&& other) noexcept; //Move konstructor
 	String();
-	String(const char* str);
-	String(const wchar_t* str);
-	String(char symbol);
-	String(size_t n, char symbol);
+	String(const T* str);
+	String(T symbol);
+	String(size_t n, T symbol);
 	String(int n);
 	String(const String& other, size_t pos, size_t count);
-	String(const char* ps, size_t count);
+	String(const T* ps, size_t count);
 	~String()noexcept;
 	/////////
 
 	//Operator overloading
-
+	int mystrcmp(const T*  lhs, const T*  rhs)const;
 	template< typename T2>
 	String& To_string(T2 n);
 	T& operator()(int i);
 	const T& operator[](size_t index)const;
-	T& operator[](size_t index);
+	T& operator[](int pos);
 	const bool operator!=(const String& other)const;
 	const bool operator==(const String& other)const;
 	String& operator =(const String& other);
-	String& operator =(const char* s);
-	String& operator =(char c);
+	String& operator =(const T* s);
+	String& operator =(T c);
 	String operator+(const String<T>& other);
 	String operator+(size_t number);
+	String operator+(const T* str);
 	template<typename T>
-	friend String operator+(const String& lhs, const char* rhs);
+	friend String operator+(const String& lhs, const T* rhs);
 	template<typename T>
 	friend String operator+(const String& lhs, const String& rhs);
 	const bool operator>(const String& other)const;
 	constexpr bool operator<(const String& other)const;
 	bool operator>=(const String& other);
 	bool operator<=(const String& other);
+	String& operator+=(const String<T>& right);
 	template<typename T>
-	friend String& operator+=(String& left, const String& right);
+	friend String& operator+=(String<T>& left, const String<T>& right);
 	template<typename T>
-	friend String& operator+=(String& left, const char symbol);
+	friend String& operator+=(String& left, const T symbol);
 	template<typename T>
 	friend std::ostream& operator<<(std::ostream& out, const String<T>& other);
 	template<typename T>
@@ -90,13 +91,13 @@ public:
 	/////////////////////////////////////////////
 
 	//Methods for working with strings////
-	const char* c_str() const;
+	const T* c_str() const;
 	String& Resize(int n);
 	String& Resize(short int n, char symbol);
 	String SubStr(size_t pos = 0, size_t count = Npos)const;
-	String& Push_back(const char c);
+	String& Push_back(const T c);
 	String& pop_back();
-	String& Push_front(const char c);
+	String& Push_front(const T c);
 	String& Pop_front();
 	String& Erase(int position);
 	String& Erase(size_t index = 0, size_t num = Npos);
@@ -128,7 +129,7 @@ public:
 	const String GetStr()const;
 	bool isEmpty();
 	void swap(String& str);
-	char& at(size_t pos);
+	T& at(size_t pos);
 	int compare(size_t start, size_t num, const String& s) const;
 	int compare(size_t start, size_t num, const char* s) const;
 	int compare(const String& s) const noexcept;
@@ -147,11 +148,55 @@ public:
 	reverse_iterator rend()const;
 	const_reverse_iterator rcbegin()const;
 	const_reverse_iterator rcend()const;
-
+	operator char* ();
+	operator String<T>();
+	template<typename U>
+	operator String<U>();
+	void Reserve(size_t n=0);
+	size_t SizeStr(const T* str)const;
 };
 
 using sstring = String<char>; // This typedef is needed in order not to write many times String<char> and Iterators<char>
+using u16sstring = String<char16_t>;
+using u32sstring = String<char32_t>;
+using wsstring = String<wchar_t>;
 
+template<typename T>
+template<typename U>
+inline String<T>::operator String<U>()
+{
+	return String<U>(str);
+}
+template<typename T>
+inline String<T>::operator String<T>()
+{
+	return String<T>(str);
+}
+template<typename T>
+inline String<T>::operator char* ()
+{
+	char* buf = new char[size + 1];
+		for (int i = 0; i < size+1; i++)
+			buf[i] = (char)str[i];
+	return buf;
+}
+template<typename T>
+inline void String<T>::Reserve(size_t n)
+{
+	if (str && size >0)
+	{
+		char* tempstr = allocator.allocate(size + 1);
+		for (int i = 0; i < size; i++)
+			allocator.construct(tempstr + i, str[i]);
+		tempstr[size] = 0;
+		allocator.deallocate(str, size);
+		if(n >capacity)
+		str = allocator.allocate(capacity + 16);
+		for (int i = 0; i < size; i++)
+			allocator.construct(str + i, tempstr[i]);
+		str[n] = 0;
+	}
+}
 template<typename T>
 inline String<T>::iterator String<T>::begin()const
 {
@@ -206,7 +251,18 @@ inline String<T>::reverse_iterator String<T>::rend() const
 
 /////////////////TemplateClass String///////////////////
 template<typename T>
-inline String<T>::String(const char* ps, size_t count)
+inline size_t String<T>::SizeStr(const T* str)const
+{
+	size_t count = 0,i=0;
+	while (str[i] != 0)
+	{
+		count++;
+		i++;
+	}
+	return i;
+}
+template<typename T>
+inline String<T>::String(const T* ps, size_t count)
 {
 	this->str = allocator.allocate(count+1);
 	for(int i =0;i<count;i++)
@@ -230,36 +286,15 @@ String<T>::String()
 	this->size = 0;
 }
 template<typename T>
-String<T>:: String(const char* str)
+String<T>:: String(const T* str)
 {
-	int count = 0, i = 0;
-	while (str[i] != 0)
-	{
-		count++;
-		i++;
-	}
-	size = count;
+	size = SizeStr(str);
 	this->str = allocator.allocate(size+1);
 	for (int i = 0; i < size; i++)
 		allocator.construct(this->str + i, str[i]);
 	this->str[size] = '\0';
 }
 
-template<typename T>
-inline String<T>::String(const wchar_t* str)
-{
-	int count = 0, i = 0;
-	while (str[i] != 0)
-	{
-		count++;
-		i++;
-	}
-	size = count;
-	this->str = new T[size + 1];
-	for (int i = 0; i < size; i++)
-		this->str[i] = str[i];
-	this->str[size] = '\0';
-}
 
 template<typename T>
 String<T>::String(const String<T>& other) :String(other.str) {}
@@ -273,7 +308,7 @@ String<T>::String(String<T>&& other)noexcept
 	other.size = 0;
 }
 template<typename T>
-String<T>::String(char symbol)
+String<T>::String(T symbol)
 {
 	str = allocator.allocate(2);
 	size= 1;
@@ -281,7 +316,7 @@ String<T>::String(char symbol)
 	str[size] = 0;
 }
 template<typename T>
-String<T>::String(size_t n, char symbol)
+String<T>::String(size_t n, T symbol)
 {
 	this->str = new T[n + 1];
 	for (int i = 0; i < n; i++)
@@ -292,7 +327,7 @@ String<T>::String(size_t n, char symbol)
 template<typename T>
 String<T>::String(int n)
 {
-	String::To_String(n);
+	String::To_string(n);
 }
 template<typename T>
 String<T>::~String() noexcept
@@ -317,11 +352,12 @@ String<T> String<T>::operator+(const String<T>& other)
 	s.str = allocator.allocate(count + 1);
 	s.size = count;
 	int i = 0;
-	for (; i < size; i++)
+	for (; i < size+1; i++)
 		allocator.construct(s.str + i, str[i]);
+	i--;
 	for (int j = 0; j < other.size; j++, i++)
-		allocator.construct(s.str+i,other[j]);
-	s[count] = '\0';
+		allocator.construct(s.str+i,other.str[j]);
+	s.str[count] = '\0';
 	s.size = count;
 	return s;
 }
@@ -334,12 +370,12 @@ inline T& String<T>::operator()(int i)
 template<typename T>
 inline const T& String<T>::operator[](size_t index) const
 {
-	return str[index];
+	return this->str[index];
 }
 template<typename T>
-inline T& String<T>::operator[](size_t index)
+inline T& String<T>::operator[](int pos)
 {
-	return this->str[index];
+	return this->str[pos];
 }
 template<typename T>
 String<T>& String<T>::Replace(size_t pos, size_t len, const String<T>& str)
@@ -381,13 +417,13 @@ String<T>& operator+=(String<T>& left, const String<T>& right)
 	return left;
 }
 template<typename T>
-inline String<T>& operator+=(String<T>& left, const char symbol)
+inline String<T>& operator+=(String<T>& left, const T symbol)
 {
 	left.Push_back(symbol);
 	return left;
 }
 template<typename T>
-inline String<T> operator+(const String<T>& lhs, const char* rhs)
+inline String<T> operator+(const String<T>& lhs, const T* rhs)
 {
 	String<T> temp(rhs);
 	temp = lhs + temp;
@@ -400,36 +436,68 @@ inline String<T> operator+(const String<T>& lhs, const String<T>& rhs)
 	temp = temp + rhs;
 	return temp;
 }
+template<typename T>
+inline int String<T>::mystrcmp(const T*  lhs, const T*  rhs)const
+{
+	size_t count = 0;
+	size_t sizelhs = SizeStr(lhs);
+	size_t sizerhs = SizeStr(rhs);
+	if (sizelhs > sizerhs)
+		return 1;
+	else if (sizelhs < sizerhs)
+		return -1;
+	else
+		for (int i = 0; i < sizelhs; i++)
+		{
+			if (lhs[i] > rhs[i])
+				return 1;
+			else if (lhs[i] < rhs[i])
+				return -1;
+			else if (lhs[i] == rhs[i])
+				count++;
+		}
+	if (count == sizelhs)
+		return 0;
+}
+
 //Overloaded Comparison Operators
 template<typename T>
 inline const bool String<T>::operator>(const String<T>& other)const
 {
-	return size > other.size;
+	return mystrcmp(this->str,other.str) <0;
 }
 template<typename T>
 inline constexpr bool String<T>::operator<(const String<T>& other)const
 {
-	return size < other.size;
+	return  mystrcmp(this->str, other.str) >0;
 }
 template<typename T>
 inline bool String<T>::operator>=(const String<T>& other)
 {
-	return strcmp(this->str, other.str) == 0 || strcmp(this->str, other.str) == 1;
+	return  mystrcmp(this->str, other.str) ==0 || mystrcmp(this->str, other.str)  == 1;
 }
 template<typename T>
 inline bool String<T>::operator<=(const String<T>& other)
 {
-	return strcmp(this->str, other.str) == 0 || strcmp(this->str, other.str) == -1;
+	return  mystrcmp(this->str, other.str)  == 0 || mystrcmp(this->str, other.str)  == -1;
+}
+template<typename T>
+inline String<T>& String<T>::operator+=(const String<T>& right)
+{
+	String& tempstr = *this;
+	tempstr = tempstr + right;
+	return *this;
 }
 template<typename T>
 inline const bool String<T>::operator==(const String<T>& other)const
 {
-	return strcmp(this->str, other.str) == 0;
+
+	return mystrcmp(this->str, other.str) ==0;
 }
 template<typename T>
 inline const bool String<T>::operator!=(const String<T>& other)const
 {
-	return strcmp(this->str, other.str) < 0 || strcmp(this->str, other.str) > 0;
+	return  mystrcmp(this->str, other.str)  < 0 || mystrcmp(this->str, other.str)  > 0;
 }
 
 template<typename T>
@@ -455,18 +523,12 @@ String<T>& String<T>::operator =(const String<T>& other)
 	return *this;
 }
 template<typename T>
-String<T>& String<T>::operator=(const char* s)
+String<T>& String<T>::operator=(const T* s)
 {
+	size_t i = 0;
 	if (this->str != nullptr)
 		allocator.deallocate(this->str,size);
-	int count = 0, i = 0;
-	while (s[i] != 0)
-	{
-		count++;
-		i++;
-	}
-	i = 0;
-	size = count;
+	size = SizeStr(s);
 	str = allocator.allocate(size + 1);
 	while (s[i] != 0)
 	{
@@ -477,10 +539,10 @@ String<T>& String<T>::operator=(const char* s)
 	return *this;
 }
 template<typename T>
-String<T>& String<T>::operator=(char c)
+String<T>& String<T>::operator=(T c)
 {
 	if(this->str)
-		delete[]this->str;
+		allocator.deallocate(str,size);
 	size = 1;
 	str = allocator.allocate(size + 1);
 	allocator.construct(str, c);
@@ -498,11 +560,19 @@ inline String<T> String<T>::operator+(size_t number)
 	return this->str + number;
 }
 
+template<typename T>
+inline String<T> String<T>::operator+(const T* str)
+{
+	String<T>tempstr(str);
+	String<T>& tempthis = *this;
+	return tempthis + tempstr;
+}
+
 //Formation of a string in the style of C (char)
 template<typename T>
-inline const char* String<T>::c_str() const
+inline const T* String<T>::c_str() const
 {
-	return this->str;
+	return str;
 }
 template<typename T>
 inline void String<T>::assignment(char* pc, const String<T>& other)
@@ -546,7 +616,7 @@ inline int String<T>::compare(const char* s) const
 }
 //Returning a reference to an element of a string
 template<typename T>
-inline char& String<T>::at(size_t pos)
+inline T& String<T>::at(size_t pos)
 {
 	try
 	{
@@ -579,24 +649,30 @@ String<T>& String<T>::Resize(int n)
 			throw out_of_range("String<T>::Resize ");
 		String TempStr;
 		int OrigSize = this->size, count = size;
-		TempStr.str = new T[n + 1]; //Allocating memory for a temporary string that will store the result
+		TempStr.str = allocator.allocate(n + 1);  //Allocating memory for a temporary string that will store the result
 		TempStr.size = n; //Assigning a new size to the original string
-		TempStr[n] = '\0'; // Add zero at the end of the line
+		TempStr.str[n] = '\0'; // Add zero at the end of the line
 		if (n < size)
-			strncpy(TempStr.str, str, n);
+		{
+			for (int i = 0; i < n; i++)
+				allocator.construct(TempStr.str + i, this->str[i]);
+		}
 		else
 		{
-			strncpy(TempStr.str, str, size);
-			while (TempStr[count] != '\0') //Filling the selected cells of the array with emptiness (it is necessary so that garbage values are not displayed)
+
+			for (int i = 0; i < size; i++)
+				allocator.construct(TempStr.str + i, this->str[i]);
+			while (TempStr.str[count] != '\0') //Filling the selected cells of the array with emptiness (it is necessary so that garbage values are not displayed)
 			{
-				TempStr[count] = ' ';
+				TempStr.str[count] = ' ';
 				count++; //Increasing the index
 			}
 		}
-		delete[]this->str; /*We clear the memory in order to later change the size of the string when memory is allocated*/
+		allocator.deallocate(str, size); /*We clear the memory in order to later change the size of the string when memory is allocated*/
 		this->size = n; //Assign a new size
-		this->str = new T[size + 1]; //Allocate new memory
-		strncpy(str, TempStr.str, size);
+		this->str = allocator.allocate(size + 1); //Allocate new memory
+		for (int i = 0; i < size; i++)
+			allocator.construct(this->str+i , TempStr.str[i]);
 		this->str[size] = '\0';
 		return *this; // We return as a result the object that needed to be changed
 	}
@@ -644,7 +720,7 @@ String<T>& String<T>::Resize(short int n, char symbol)
 }
 //Method for inserting a character at the end of a string
 template<typename T>
-String<T>& String<T>::Push_back(const char c)
+String<T>& String<T>::Push_back(const T c)
 {
 	T* tempstr = allocator.allocate(size+1);
 	memcpy(tempstr, str, size+1);
@@ -689,7 +765,7 @@ String<T>& String<T>::pop_back()
 	}
 }
 template<typename T>
-String<T>& String<T>::Push_front(const char c)
+String<T>& String<T>::Push_front(const T c)
 {
 	try
 	{
@@ -697,13 +773,13 @@ String<T>& String<T>::Push_front(const char c)
 		{
 			throw bad_alloc();
 		}
-		String temp(c);
-		String result(this->str);
+		String<T> temp(c);
+		String<T> result(this->str);
 		temp += result;
-		delete[]str;
-		str = new T[temp.size + 1];
+		allocator.deallocate(str,size);
+		str =allocator.allocate(temp.size+1);
 		for (int i = 0; i < temp.size; i++)
-			str[i] = temp[i];
+			allocator.construct(str+i,temp[i]);
 		size = temp.size;
 		str[temp.size] = '\0';
 		return *this;
@@ -861,7 +937,7 @@ inline String<T>& String<T>::assign(const String<T>& s, size_t st, size_t num)
 	size_t size = num;
 	size_t j = 0;
 	str = new T[size + 1];
-	for (int i = st; i < num; i++, j++)
+	for (int i = st; j < num; i++, j++)
 		this->str[j] = s[i];
 	str[size] = '\0';
 	return *this;
@@ -902,6 +978,7 @@ inline String<T>& String<T>::assign(size_t n, char c)
 	str[n] = '\0';
 	return *this;
 }
+
 //String Assignment
 template<typename T>
 String<T>& String<T>::assign(const String<T>& str)
@@ -1037,7 +1114,7 @@ String<T>& String<T>::append(const String<T>& str)
 	size = temp.size;
 	this->str = allocator.allocate(size + 1);
 	for (int i = 0; i < size; i++)
-		allocator.construct(this->str + i, temp[i]);
+		allocator.construct(this->str + i, temp.str[i]);
 	this->str[size] = '\0';
 	return *this;
 }
@@ -1125,6 +1202,7 @@ size_t String<T>::find(char symbol, size_t position)
 	}
 	if (res == 0)
 		std::cout << "Nothing found";
+	return (int)Npos;
 }
 template<typename T>
 size_t String<T>::find(const char* const str, size_t pos)
@@ -1184,7 +1262,7 @@ const String<T> String<T>::GetStr() const
 template<typename T>
 inline bool String<T>::isEmpty()
 {
-	int L = strlen(this->str);
+	int L = size;
 	if (L > 0)
 		return 0;
 	else
@@ -1207,7 +1285,7 @@ inline const char& String<T>::back()
 	{
 		if (size == 0 || this->str == nullptr)
 			throw exception("Your string length == 0 or string = nullptr");
-		return this->Str[size - 1];
+		return this->str[size - 1];
 	}
 	catch (exception & exp)
 	{
@@ -1229,8 +1307,10 @@ std::istream& operator>>(std::istream& is, String<T>& str)
 	// the string size is limited to 100000 characters
 	delete[]str.str; //delete memory
 	str.size = strlen(buf);
-	str.str = new char[str.size + 1];
-	strcpy(str.str, buf);
+	str.str = new T[str.size + 1];
+	for (int i = 0; i < str.size+1; i++)
+		str.str[i] = buf[i];
+	
 	delete[]buf;
 	return is;
 }
