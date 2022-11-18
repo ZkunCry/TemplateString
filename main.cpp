@@ -1,13 +1,13 @@
 ﻿#define  _CRT_SECURE_NO_WARNINGS
+
 #include <iostream>
 #include "String.h"
 #include <string>
+
 void main()
 {
-
-	
-	wsstring str(L"aalpha");
-	wsstring str2(L"alpha");
-	str.Push_front(L'c');
-	wcout << str[0];
+	String<wchar_t> str(L"alpha");
+	String<char> str2("bga");
+	str.Replace(0, str.Size()-2, L"Pizda");
+	wcout << str;
 }

@@ -23,7 +23,9 @@ public:
 	~Allocator() noexcept;
 	size_type max_size() const;
 	pointer allocate(size_type num, const void* = 0);
+
 	void construct(pointer p, const T& value);
+
 	void destroy(pointer p);
 	template<class U>
 	void destroy(U * p);
@@ -83,8 +85,6 @@ inline void Allocator<T>::construct(pointer p, const T& value)
 {
 	new((void*)p)T(value);
 }
-
-
 
 template<typename T>
 inline void Allocator<T>::destroy(pointer  p)
