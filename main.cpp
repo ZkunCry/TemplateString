@@ -6,8 +6,8 @@
 
 void main()
 {
-	String<wchar_t> str(L"alpha");
-	String<char> str2("bga");
-	str.Replace(0, str.Size()-2, L"Pizda");
-	wcout << str;
+	String<char> str("alpha");
+	String<char> str2("alphatwo");
+	str.assign(std::move(str2));
+	cout << str;
 }
