@@ -57,6 +57,7 @@ public:
 	template <typename T2>
 	String(const String<T2>& other);
 	~String()noexcept;
+	size_t Copy(T* str, size_t _Count, size_t _Pos=0);
 	/////////
 
 	
@@ -289,6 +290,7 @@ String<T>::String(const String<T>& other) :String(other.str) {}
 template<typename T>
 String<T>::String(String<T>&& other)noexcept
 {
+
 	this->str = other.str;
 	this->size = other.size;
 	other.str = nullptr;
@@ -324,6 +326,14 @@ String<T>::~String() noexcept
 		allocator.deallocate(str, size);
 		this->size = 0;
 	}
+}
+template<typename T>
+inline size_t String<T>::Copy(T* str, size_t _Count, size_t _Pos)
+{
+	String<T> tempstr((this->SubStr(_Pos, _Count)));
+	for (int i = 0; i < tempstr.size; i++)
+		str[i] = tempstr[i];
+	return tempstr.size;
 }
 //String Size Method
 template<typename T>
@@ -475,14 +485,15 @@ inline const bool String<T>::operator!=(const String<T2>& other)const
 template<typename T>
 inline String<T>& String<T>::operator=(String&& other) noexcept
 {
-	if (this != &other)
+	swap(other);
+	/*if (this != &other)
 	{
 		delete[]this->str;
 		size = other.size;
 		str = other.str;
 		other.size = 0;
 		other.str = nullptr;
-	}
+	}*/
 	return *this;
 }
 template<typename T>

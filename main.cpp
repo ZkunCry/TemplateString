@@ -6,8 +6,14 @@
 
 void main()
 {
-	String<char> str("alpha");
-	String<char> str2("alphatwo");
-	str.assign(std::move(str2));
-	cout << str;
+	
+	/*String<char> str2("alphatwo");
+	String<char> str("pizda");
+	str = std::move(str2);
+	cout << str;*/
+	String<char> str("Pizda");
+	char buf[20];
+
+	cout << str.Copy(buf, 7, 1);
+	
 }
