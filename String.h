@@ -30,7 +30,7 @@ private:
 	size_t capacity;
 	size_t count_capacity;
 	Allocator<T> allocator;
-	void assignment(char* pc, const String& other);
+	
 	
 public:
 
@@ -123,8 +123,8 @@ public:
 	String& assign(size_t n, T c);
 	String& assign(String<T> &&str)noexcept;
 	String& Replace(size_t pos, size_t len, const String& str);
-	String& Replace(size_t pos, size_t len, const T* s);
-	String& Replace(size_t pos, size_t len, size_t n, T c);
+	template<typename T2>
+	String& Replace(size_t pos, size_t len, const T2* s);
 	String& Replace(const_iterator it1,const_iterator it2,const T *pc);
 	size_t Size()const noexcept;
 	String& reverse();
@@ -154,9 +154,9 @@ public:
 	template<typename U>
 	operator String<U>();
 	void Reserve(size_t n=0);
-	size_t SizeStr(const T* str)const;
+	size_t SizeStr(const T* str)const noexcept;
 	template<typename T2>
-	size_t SizeStr(const T2* str)const;
+	size_t SizeStr(const T2* str)const noexcept;
 };
 // This using is needed in order not to write many times String<char> and Iterators<char>
 using sstring = String<char>; 
@@ -217,7 +217,7 @@ inline String<T>::reverse_iterator String<T>::rend() const noexcept
 
 /////////////////TemplateClass String///////////////////
 template<typename T>
-inline size_t String<T>::SizeStr(const T* str)const
+inline size_t String<T>::SizeStr(const T* str)const noexcept
 {
 	size_t count = 0,i=0;
 	while (str[i] != 0)
@@ -383,20 +383,16 @@ String<T>& String<T>::Replace(size_t pos, size_t len, const String<T>& str)
 	String::insert(pos, str.str);
 	return *this;
 }
+
 template<typename T>
-String<T>& String<T>::Replace(size_t pos, size_t len, const T* s)
+template<typename T2>
+String<T>& String<T>::Replace(size_t pos, size_t len, const T2* s)
 {
 	String str(s);
 	String::Replace(pos, len, str);
 	return *this;
 }
-template<typename T>
-String<T>& String<T>::Replace(size_t pos, size_t len, size_t n, T c)
-{
-	String str(n, c);
-	String::Replace(pos, len, str);
-	return *this;
-}
+
 template<typename T>
 inline String<T>& String<T>::Replace(const_iterator it1, const_iterator it2, const T* pc)
 {
@@ -521,7 +517,7 @@ inline String<T>& String<T>::operator=(const String<T2>& s)
 }
 template<typename T>
 template<typename T2>
-inline size_t String<T>::SizeStr(const T2* str) const
+inline size_t String<T>::SizeStr(const T2* str) const noexcept
 {
 	size_t count = 0, i = 0;
 	while (str[i] != 0)
@@ -596,13 +592,7 @@ inline const T* String<T>::c_str() const noexcept
 {
 	return str;
 }
-template<typename T>
-inline void String<T>::assignment(char* pc, const String<T>& other)
-{
-	for (int i = 0; i < size; i++)
-		pc[i] = other[i];
-	pc[size] = '\0';
-}
+
 //Getting a reference to the first element of a string
 template<typename T>
 inline constexpr T& String<T>::front()
@@ -853,32 +843,37 @@ String<T> String<T>::SubStr(size_t pos, size_t count)const
 	then in this case you will need to copy from pos to the end of the line
 	If the number of characters to be copied, starting from pos, does not exceed the length of the original string,
 	Then the string is copied from pos to count*/
-
-	if((int)pos <size  || (int)count == Npos ||(int)pos >0 && (int)count >0)
-	{ 
-		if (count == Npos || count >size)
-			count = size-(int)pos;
-	String TempStr;
-	size_t j = 0;
-	/*if (pos > 0) pos--;*/
-	TempStr.size = count;
-	/*pos++;*/
-	TempStr.str = new T[TempStr.size+1]; /*In this case, memory allocation is simple:
-				Starting from position pos (including it), characters up to count are copied,
-				in this case, it would be rational to take the count of copied characters and use as
-				line size*/
-	for (size_t i = pos; i < count+pos; j++, i++)
+	try
 	{
-		TempStr.str[j] = this->str[i];
-	}
+		if ((int)pos > size  || (int)pos < 0 && (int)count < 0)
+			throw  range_error("String<T>::SubStr");
+		else
+		{
 
-	TempStr.str[count] = '\0';
-	return TempStr;
-	}
+			if (count == Npos || count > size)
+				count = size - (int)pos;
+			String TempStr;
+			size_t j = 0;
+			/*if (pos > 0) pos--;*/
+			TempStr.size = count;
+			/*pos++;*/
+			TempStr.str = new T[TempStr.size + 1]; /*In this case, memory allocation is simple:
+						Starting from position pos (including it), characters up to count are copied,
+						in this case, it would be rational to take the count of copied characters and use as
+						line size*/
+			for (size_t i = pos; i < count + pos; j++, i++)
+			{
+				TempStr.str[j] = this->str[i];
+			}
 
-	else 
+			TempStr.str[count] = '\0';
+			return TempStr;
+		}
+
+	}
+	catch (range_error& ex)
 	{
-		return String();
+		cerr << "Range error: " << ex.what() << endl;
 	}
 }
 //Removing characters from a string starting at position
@@ -1369,8 +1364,9 @@ inline void String<T>::readfile(const char *nameF,int choose)
 		allocator.deallocate(str, size);
 		str = allocator.allocate(strlen(buf) + 1);
 		size = strlen(buf);
-		for (int i = 0; i < size+1; i++)
+		for (int i = 0; i < size-1; i++)
 			allocator.construct(str + i, buf[i]);
+		allocator.construct(str + size-1,'\0');
 	}
 	else if (choose == 2)
 		cout << buf<<endl;
@@ -1379,15 +1375,16 @@ inline void String<T>::readfile(const char *nameF,int choose)
 template<typename T>
 inline void String<T>::writefile(const char* nameF)
 {
-	ofstream file(nameF, ios::out || ios::binary);
+	ofstream file(nameF);
+
 	try
 	{
-		file.is_open();
-		if (str == nullptr || size == 0 )
+		
+		if (!file.is_open())
 		{
 			throw exception("Exception! Memory hasn't been allocated or file was not found\n");
 		}
-		file.write(str,size);
+		file << str << '\n' << size;
 		file.close();
 	}
 	catch (exception& exp)

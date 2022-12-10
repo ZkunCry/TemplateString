@@ -1,19 +1,12 @@
-﻿#define  _CRT_SECURE_NO_WARNINGS
-
+﻿
 #include <iostream>
 #include "String.h"
-#include <string>
 
-void main()
+int main()
 {
-	
-	/*String<char> str2("alphatwo");
-	String<char> str("pizda");
-	str = std::move(str2);
-	cout << str;*/
-	String<char> str("Pizda");
-	char buf[20];
+	String<wchar_t> str(L"Chlen");
+	String<wchar_t> str2(L"Pizda");
+	wcout<<str.SubStr(-1, 1);
 
-	cout << str.Copy(buf, 7, 1);
-	
+	return 0;
 }
