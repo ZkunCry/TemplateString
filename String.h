@@ -377,11 +377,18 @@ inline T& String<T>::operator[](int pos)
 template<typename T>
 String<T>& String<T>::Replace(size_t pos, size_t len, const String<T>& str)
 {
-	if (len > Size())
-		len = Size();
-	String::Erase(pos, len);
-	String::insert(pos, str.str);
-	return *this;
+	try
+	{
+		if (len > Size())
+			throw range_error("String<T>::Replace");
+		String::Erase(pos, len);
+		String::insert(pos, str.str);
+		return *this;
+	}
+	catch (range_error& re)
+	{
+		cerr << "Range error: " << re.what()<<endl;
+	}
 }
 
 template<typename T>
@@ -880,34 +887,45 @@ String<T> String<T>::SubStr(size_t pos, size_t count)const
 template<typename T>
 inline String<T> &String<T>::Erase(int position)
 {
-	String Temp;
-	int j = 0;
-	Temp.str = allocator.allocate(size);
-	for (int i = 0; i < size; i++)
+	try
 	{
-		if (i == position)
-		{
-			Temp.str[position] = this->str[position + 1];
-			j = position + 1;
-			i++;
-		}
-		else
-		{
-			Temp.str[j] = this->str[i];
-			j++;
-		}
 
+		if (position > size)
+			throw out_of_range("String<T>::Erase");
+		String Temp;
+		int j = 0;
+		Temp.str = allocator.allocate(size);
+		for (int i = 0; i < size; i++)
+		{
+			if (i == position)
+			{
+				Temp.str[position] = this->str[position + 1];
+				j = position + 1;
+				i++;
+			}
+			else
+			{
+				Temp.str[j] = this->str[i];
+				j++;
+			}
+
+		}
+		Temp.str[size - 1] = '\0';
+		allocator.deallocate(str, size);
+		str = allocator.allocate(size);
+		for (int i = 0; i < size - 1; i++)
+		{
+			str[i] = Temp.str[i];
+		}
+		size--;
+		str[size] = '\0';
+		return *this;
 	}
-	Temp.str[size - 1] = '\0';
-	allocator.deallocate(str,size);
-	str = allocator.allocate(size);
-	for (int i = 0; i < size - 1; i++)
+	catch (out_of_range& err)
 	{
-		str[i] = Temp.str[i];
+		cerr << "Out_of_range: " << err.what() << endl;
+		return *this;
 	}
-	size--;
-	str[size] = '\0';
-	return *this;
 }
 //Overloaded method for removing characters from a string
 template<typename T>
@@ -950,53 +968,92 @@ String<T>& String<T>::Erase(size_t index, size_t num)
 template<typename T>
 inline String<T>& String<T>::assign(const String<T>& s, size_t st, size_t num)
 {
-	
-	if (this->size != 0 || this->str != nullptr)
-		delete[]str;
-	size_t size = num;
-	size_t j = 0;
-	str = new T[size + 1];
-	for (int i = st; j < num; i++, j++)
-		this->str[j] = s[i];
-	str[size] = '\0';
-	return *this;
+	try
+	{
+		if (this->size == 0 || str == nullptr)
+			throw exception("String<T>::assign");
 
+			delete[]str;
+			size_t size = num;
+			size_t j = 0;
+			str = new T[size + 1];
+			for (int i = st; j < num; i++, j++)
+				this->str[j] = s[i];
+			str[size] = '\0';
+			return *this;
+
+	}
+	catch (exception& err)
+	{
+		cerr << "bad_alloc: " << err.what();
+		return *this;
+	}
 }
 template<typename T>
 String<T>& String<T>::assign(const T* ps, size_t st, size_t num)
 {
-	if (this->size != 0 || this->str != nullptr)
+	try
+	{
+		if (this->size == 0 || this->str == nullptr)
+			throw exception("String<T>::assign");
+
 		delete[]str;
-	size_t size = num;
-	size_t j = 0;
-	str = new T[size + 1];
-	for (int i = st; i < num + st; i++, j++)
-		this->str[j] = ps[i];
-	str[size] = '\0';
-	this->size = SizeStr(str);
-	return *this;
+		size_t size = num;
+		size_t j = 0;
+		str = new T[size + 1];
+		for (int i = st; i < num + st; i++, j++)
+			this->str[j] = ps[i];
+		str[size] = '\0';
+		this->size = SizeStr(str);
+		return *this;
+	}
+	catch (exception& ex)
+	{
+		cerr << "Bad_alloc: " << ex.what();
+		return *this;
+	}
 }
 template<typename T>
 inline String<T>& String<T>::assign(const T* ps, size_t n)
 {
-	delete[]str;
-	str = new T[n + 1];
-	size = n;
-	for (int i = 0; i < n; i++)
-		str[i] = ps[i];
-	str[n] = '\0';
-	return *this;
+	try
+	{
+		if(str == nullptr || size == 0)
+			throw exception("String<T>::assign");
+		delete[]str;
+		str = new T[n + 1];
+		size = n;
+		for (int i = 0; i < n; i++)
+			str[i] = ps[i];
+		str[n] = '\0';
+		return *this;
+	}
+	catch (exception& ex)
+	{
+		cerr << "Bad_alloc: " << ex.what();
+		return *this;
+	}
 }
 template<typename T>
 inline String<T>& String<T>::assign(size_t n, T c)
 {
-	String temp(n, c);
-	delete[] str;
-	str = new T[n + 1];
-	size = n;
-	strncpy(str, temp.str, n);
-	str[n] = '\0';
-	return *this;
+	try
+	{
+		if (str == nullptr || size == 0)
+			throw exception("String<T>::assign");
+		String temp(n, c);
+		delete[] str;
+		str = new T[n + 1];
+		size = n;
+		strncpy(str, temp.str, n);
+		str[n] = '\0';
+		return *this;
+	}
+	catch (exception& ex)
+	{
+		cerr << "Bad_alloc: " << ex.what();
+		return *this;
+	}
 }
 
 template<typename T>
@@ -1027,62 +1084,96 @@ String<T>& String<T>::assign(const String<T>& str)
 template<typename T>
 String<T>& String<T>::append(const String<T>& other, size_t start)
 {
-	String TempStr;
-	String resultOther;
+	try
+	{
+		if (other.str == nullptr || str == nullptr || other.size == 0 || size == 0)
+			throw exception("String<T>::append");
+		else if (start > size || start < size)
+			throw out_of_range("String<T>::append");
+		String TempStr;
+		String resultOther;
 
-	resultOther.str = new T[start + 1];
+		resultOther.str = new T[start + 1];
 
-	for (int i = 0; i < start; i++)
-		resultOther.str[i] = other[i];
+		for (int i = 0; i < start; i++)
+			resultOther.str[i] = other[i];
 
-	resultOther.str[start] = '\0';
-	resultOther.size = start;
+		resultOther.str[start] = '\0';
+		resultOther.size = start;
 
-	TempStr.str = new T[this->size + 1];
-	TempStr.size = this->size;
-	for (int i = 0; i < size; i++)
-		TempStr.str[i] = this->str[i];
-	TempStr.str[size] = '\0';
-	TempStr = TempStr + resultOther;
-	for (int i = 0; i < size; i++)
-		TempStr.str[i] = this->str[i];
-	this->str = new T[TempStr.Size() + 1];
-	for (int i = 0; i < TempStr.Size(); i++)
-		this->str[i] = TempStr.str[i];
-	this->size = TempStr.size;
-	this->str[TempStr.size] = '\0';
-	return *this;
+		TempStr.str = new T[this->size + 1];
+		TempStr.size = this->size;
+		for (int i = 0; i < size; i++)
+			TempStr.str[i] = this->str[i];
+		TempStr.str[size] = '\0';
+		TempStr = TempStr + resultOther;
+		for (int i = 0; i < size; i++)
+			TempStr.str[i] = this->str[i];
+		this->str = new T[TempStr.Size() + 1];
+		for (int i = 0; i < TempStr.Size(); i++)
+			this->str[i] = TempStr.str[i];
+		this->size = TempStr.size;
+		this->str[TempStr.size] = '\0';
+		return *this;
+	}
+	catch (out_of_range& out)
+	{
+		cerr << "out_of_range: " << out.what();
+		return *this;
+	}
+	catch (exception& ex)
+	{
+		cerr << "bad_alloc: " << ex.what();
+		return *this;
+	}
 }
 //Adding another string to the original string
 template<typename T>
 String<T>& String<T>::append(const T* other, size_t num)
 {
-	String TempStr;
-	/* Temporary strings needed
-	for computing*/
-	String resultOther;
-	resultOther.size = num;
-	resultOther.str = new T[num + 1];
+	try
+	{
+		if (other == nullptr || str == nullptr || SizeStr(other) == 0 || size == 0)
+			throw exception("String<T>::append");
+		else if (num > size || num < size)
+			throw out_of_range("String<T>::append");
+		String TempStr;
+		/* Temporary strings needed
+		for computing*/
+		String resultOther;
+		resultOther.size = num;
+		resultOther.str = new T[num + 1];
 
-	for (int i = 0; i < num; i++)
-		resultOther.str[i] = other[i];
+		for (int i = 0; i < num; i++)
+			resultOther.str[i] = other[i];
 
-	resultOther.str[num] = '\0';
+		resultOther.str[num] = '\0';
 
-	TempStr.str = new T[this->size + 1];
-	TempStr.size = size;
-	for (int i = 0; i <SizeStr(str); i++)
-		TempStr[i] = this->str[i];
-	TempStr.str[size] = '\0';
-	TempStr = TempStr + resultOther;
-	for (int i = 0; i < size; i++)
-		TempStr[i] = this->str[i];
-	this->str = new T[TempStr.Size() + 1];
-	for (int i = 0; i < TempStr.Size(); i++)
-		this->str[i] = TempStr.str[i];
-	this->size = TempStr.size;
-	this->str[TempStr.size] = '\0';
-	return *this;
+		TempStr.str = new T[this->size + 1];
+		TempStr.size = size;
+		for (int i = 0; i < SizeStr(str); i++)
+			TempStr[i] = this->str[i];
+		TempStr.str[size] = '\0';
+		TempStr = TempStr + resultOther;
+		for (int i = 0; i < size; i++)
+			TempStr[i] = this->str[i];
+		this->str = new T[TempStr.Size() + 1];
+		for (int i = 0; i < TempStr.Size(); i++)
+			this->str[i] = TempStr.str[i];
+		this->size = TempStr.size;
+		this->str[TempStr.size] = '\0';
+		return *this;
+	}
+	catch (out_of_range& out)
+	{
+		cerr << "out_of_range: " << out.what();
+		return *this;
+	}
+	catch (exception& ex)
+	{
+		cerr << "bad_alloc: " << ex.what();
+		return *this;
+	}
 }
 //Method that adds two strings, for example
 /*String s1 = "123" String s2 = "456 result
@@ -1228,7 +1319,7 @@ size_t String<T>::find(const T* const str, size_t pos)
 	{
 
 		if (((int)pos) > size || size == 0 || this->str == nullptr)
-			throw exception( "Exception! Your string size == 0 or position find is bigger than length");
+			throw length_error( "String<T>::find");
 		size_t result = 0, j = 0, q = 0;
 		for (int i = pos; i < size; i++)
 		{
@@ -1244,29 +1335,39 @@ size_t String<T>::find(const T* const str, size_t pos)
 		else
 			return 0;
 	}
-	catch (exception &exp)
+	catch (length_error&exp)
 	{
-		cerr<<exp.what();
+		cerr<< "length_error: " << exp.what()<<endl;
 		return NULL;
 	}
 }
 template<typename T>
 size_t String<T>::find(const T* const str, size_t pos, size_t n)
 {
-	size_t result = 0, j = 0, q = 0, tempn = n;
-	for (int i = pos; i != pos + n; i++)
+	try
 	{
-		if (this->str[i] == str[q])
+		if (((int)pos) > size || size == 0 || this->str == nullptr)
+			throw length_error("String<T>::find");
+		size_t result = 0, j = 0, q = 0, tempn = n;
+		for (int i = pos; i != pos + n; i++)
 		{
-			q++;
-			result++;
-			j = i;
+			if (this->str[i] == str[q])
+			{
+				q++;
+				result++;
+				j = i;
+			}
 		}
+		if (result == n)
+			return j - result + 1;
+		else
+			return 0;
 	}
-	if (result == n)
-		return j - result + 1;
-	else
-		return 0;
+	catch (length_error& exp)
+	{
+		cerr << "length_error: " << exp.what() << endl;
+		return NULL;
+	}
 }
 /*Getter for a string, returns the string it is asking for
 	user*/
