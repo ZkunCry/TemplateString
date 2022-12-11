@@ -22,21 +22,19 @@ class Allocator;
 template<typename T>
 class String
 {
-
-private:
 	using pointer_str = T*;
+private:
 	pointer_str str;
 	size_t size;
-
 	Allocator<T> allocator;
 public:
 
 	static const size_t Npos = -1;
 	//Classes Iterators
-	typedef Iterator<T> iterator;
-	typedef Iterator<const T> const_iterator;
-	typedef Reverse_Iterator<T> reverse_iterator;
-	typedef Reverse_Iterator<const T> const_reverse_iterator;
+	using iterator = Iterator<T>;
+	using const_iterator  = Iterator<const T>;
+	using reverse_iterator  = Reverse_Iterator<T>;
+	using  const_reverse_iterator  = Reverse_Iterator<const T>;
 	//////
 	//  
 	//String Constructors and Destructor
@@ -55,12 +53,11 @@ public:
 	String(const String<T2>& other);
 	~String()noexcept;
 	size_t Copy(T* str, size_t _Count, size_t _Pos=0);
-	/////////
-
-	
-	int mystrcmp(const T*  lhs, const T*  rhs)const;
+	int mystrcmp(const T* lhs, const T* rhs)const;
 	template< typename T2>
 	String& To_string(T2 n);
+	/////////
+
 	T& operator()(int i);
 	const T& operator[](size_t index)const;
 	T& operator[](int pos);
@@ -151,7 +148,6 @@ public:
 	operator char* ();
 	template<typename U>
 	operator String<U>();
-
 	size_t SizeStr(const T* str)const noexcept;
 	template<typename T2>
 	size_t SizeStr(const T2* str)const noexcept;
@@ -274,8 +270,6 @@ inline String<T>::String()
 template<typename T>
 inline String<T>:: String(const T* str)
 {
-	cout << "Call ctor" << endl;
-	cout << "Address object: " << this << endl;
 	size = SizeStr(str);
 	this->str = allocator.allocate(size+1);
 	for (int i = 0; i < size; i++)
@@ -321,13 +315,12 @@ inline String<T>::String(int n)
 template<typename T>
 String<T>::~String() noexcept
 {
-	cout << "Call dtor" << endl;
-	cout << "Address object: " << this << endl;
+
 	if (str != nullptr)
 	{
 		allocator.deallocate(str, size);
 		this->size = 0;
-		cout << "Memory has been deallocate" << endl;
+
 	}
 }
 template<typename T>
@@ -680,7 +673,6 @@ template<typename T>
 
 inline void String<T>::swap(String<T>& str)
 {
-	
 	std::swap(size, str.size);
 	std::swap(this->str, str.str);
 }
@@ -1085,7 +1077,6 @@ inline String<T>& String<T>::assign(size_t n, T c)
 template<typename T>
 inline String<T>& String<T>::assign(String<T>&& str) noexcept
 {
-
 	*this = std::move(str);
 	return *this;
 }
@@ -1093,13 +1084,22 @@ inline String<T>& String<T>::assign(String<T>&& str) noexcept
 template<typename T>
 String<T>& String<T>::assign(const String<T>& str)
 {
-	size_t size = str.Size();
-	if (this->size != 0)
-		delete[] this->str;
-	this->str = new T[size + 1];
-	this->size = size;
-	assignment(this->str, str);
-	return *this;
+	try
+	{
+		if (this->str == nullptr && str.str == nullptr)
+			throw bad_alloc();
+		size_t size = str.Size();
+		if (this->size != 0)
+			delete[] this->str;
+		this->str = new T[size + 1];
+		this->size = size;
+		assignment(this->str, str);
+		return *this;
+	}
+	catch (const bad_alloc& ba)
+	{
+		cerr << "Allocation failed: " << ba.what << endl;
+	}
 }
 //Method for finding a specific fragment in a string
 /*If the string contains n identical characters, then the function returns the original
@@ -1164,8 +1164,6 @@ String<T>& String<T>::append(const T* other, size_t num)
 		else if (num > size || num < size)
 			throw out_of_range("String<T>::append");
 		String TempStr;
-		/* Temporary strings needed
-		for computing*/
 		String resultOther;
 		resultOther.size = num;
 		resultOther.str = new T[num + 1];
@@ -1208,59 +1206,92 @@ will be 123456*/
 template<typename T>
 String<T>& String<T>::append(const String<T>& other, size_t start, size_t end)
 {
-	String TempStr;
-	TempStr.size = size;
-	String resultOther;
-	int j = 0;
-	resultOther.str = allocator.allocate(end + 1);
-	resultOther.size = end;
-	for (int i = start; j < end; j++, i++)
-		allocator.construct(resultOther.str + j, other[i]);
+	try
+	{
+		if (this->str == nullptr || other.str == nullptr)
+			throw bad_alloc();
+		else if (start <0 || start > size || end < 0 || end > 0)
+			throw out_of_range("String<T>::append");
+		String TempStr;
+		TempStr.size = size;
+		String resultOther;
+		int j = 0;
+		resultOther.str = allocator.allocate(end + 1);
+		resultOther.size = end;
+		for (int i = start; j < end; j++, i++)
+			allocator.construct(resultOther.str + j, other[i]);
 
-	resultOther.str[end] = '\0';
+		resultOther.str[end] = '\0';
 
-	TempStr.str = allocator.allocate(size + 1); 
+		TempStr.str = allocator.allocate(size + 1);
 
-	for (int i = 0; i < size; i++)
-		allocator.construct(TempStr.str + i, str[i]);
-	TempStr.str[size] = '\0';
-	TempStr = TempStr + resultOther;
-	for (int i = 0; i < size; i++)
-		allocator.construct(TempStr.str + i, str[i]); 
-	this->str = allocator.allocate(TempStr.Size() + 1); 
-	size = TempStr.size;
-	for (int i = 0; i < TempStr.Size(); i++)
-		allocator.construct(str+i, TempStr[i]); 
-	this->str[TempStr.size] = '\0';
-	return *this;
+		for (int i = 0; i < size; i++)
+			allocator.construct(TempStr.str + i, str[i]);
+		TempStr.str[size] = '\0';
+		TempStr = TempStr + resultOther;
+		for (int i = 0; i < size; i++)
+			allocator.construct(TempStr.str + i, str[i]);
+		this->str = allocator.allocate(TempStr.Size() + 1);
+		size = TempStr.size;
+		for (int i = 0; i < TempStr.Size(); i++)
+			allocator.construct(str + i, TempStr[i]);
+		this->str[TempStr.size] = '\0';
+		return *this;
+	}
+	catch (const bad_alloc& ba)
+	{
+		cerr << "Allocation failed: " << ba.what() << endl;
+	}
+	catch (const out_of_range& oof)
+	{
+		cerr << "Out of range: " << oof.what() << endl;
+	}
 }
 template<typename T>
 String<T>& String<T>::append(const String<T>& str)
 {
-	String temp(this->str);
-	temp = temp + str;
-	allocator.deallocate(this->str, size);
-	size = temp.size;
-	this->str = allocator.allocate(size + 1);
-	for (int i = 0; i < size; i++)
-		allocator.construct(this->str + i, temp.str[i]);
+	try
+	{
+		if (this->str == nullptr || str.str == nullptr)
+			throw bad_alloc();
+		String temp(this->str);
+		temp = temp + str;
+		allocator.deallocate(this->str, size);
+		size = temp.size;
+		this->str = allocator.allocate(size + 1);
+		for (int i = 0; i < size; i++)
+			allocator.construct(this->str + i, temp.str[i]);
 
-	this->str[size] = '\0';
-	return *this;
+		this->str[size] = '\0';
+		return *this;
+	}
+	catch (const bad_alloc ba)
+	{
+		cerr << "Allocation failed: " << ba << endl;
+	}
 }
 template<typename T>
 String<T>& String<T>::append(size_t n, T c)
 {
-	String temp(str);
-	for (int i = 0; i < n; i++)
-		temp.Push_back(c);
-	allocator.deallocate(str, size);
-	size = temp.size;
-	str =allocator.allocate(size + 1);
-	for (int i = 0; i < size; i++)
-		allocator.construct(str + i, temp.str[i]);
-	str[size] = '\0';
-	return *this;
+	try
+	{
+		if (n < size)
+			throw invalid_argument("String<T>::append");
+		String temp(str);
+		for (int i = 0; i < n; i++)
+			temp.Push_back(c);
+		allocator.deallocate(str, size);
+		size = temp.size;
+		str = allocator.allocate(size + 1);
+		for (int i = 0; i < size; i++)
+			allocator.construct(str + i, temp.str[i]);
+		str[size] = '\0';
+		return *this;
+	}
+	catch(const invalid_argument &arg)
+	{ 
+		cerr << "Invalid argument: " << arg.what() << endl;
+	}
 }
 template<typename T>
 template<typename T2>
@@ -1307,32 +1338,58 @@ String<T>& String<T>::insert(size_t num, const T2* str)
 template<typename T>
 String<T>& String<T>::upper(size_t start, size_t end)
 {
-	if (start <= 0 && end <= size)
+	try
 	{
-		for (int i = start; i < end; i++)
+		if (str == nullptr)
+			throw bad_alloc();
+		if (start <0 || start> size || end <0 || end >size)
+			throw out_of_range("String<T>::upper");
+		if (start <= 0 && end <= size)
 		{
-			if (str[i] >= 65 && str[i] <= 90)
-				continue;
-			else if(str[i]!=' ')
-				str[i] -= 32;
+			for (int i = start; i < end; i++)
+			{
+				if (str[i] >= 65 && str[i] <= 90)
+					continue;
+				else if (str[i] != ' ')
+					str[i] -= 32;
+			}
+			return *this;
 		}
-		return *this;
+	}
+	catch (const bad_alloc& baa) {
+		cerr << "Allocation failed: " << baa << endl;
+	}
+	catch (const out_of_range& oof) {
+		cerr << "Out of range: " << oof << endl;
 	}
 }
 //Method that makes all letters small (lowercase)
 template<typename T>
 String<T>& String<T>::lower(size_t start, size_t end)
 {
-	if (start <= 0 && end <= size)
+	try
 	{
-		for (int i = start; i < end; i++)
+		if (str == nullptr)
+			throw bad_alloc();
+		if (start <0 || start> size || end <0 || end >size)
+			throw out_of_range("String<T>::lower");
+		if (start <= 0 && end <= size)
 		{
-			if (str[i] >= 97 && str[i] <= 122)
-				continue;
-			else if(str[i]!=' ')
-				str[i] += 32;
+			for (int i = start; i < end; i++)
+			{
+				if (str[i] >= 97 && str[i] <= 122)
+					continue;
+				else if (str[i] != ' ')
+					str[i] += 32;
+			}
+			return *this;
 		}
-		return *this;
+	}
+	catch (const bad_alloc& baa) {
+		cerr << "Allocation failed: " << baa << endl;
+	}
+	catch (const out_of_range& oof) {
+		cerr << "Out of range: " << oof << endl;
 	}
 }
 //Method for finding a character that is in a specific position
