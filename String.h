@@ -112,7 +112,8 @@ public:
 	String& append(const String& other, size_t start, size_t end);
 	String& append(const String& str);
 	String& append(size_t n, T c);
-	String& insert(size_t num, const T* str);
+	template<typename T2>
+	String& insert(size_t num, const T2* str);
 	String& assign(const String<T>& str);
 	String& assign(const String<T>& s, size_t st, size_t num);
 	String& assign(const T* ps, size_t st, size_t num);
@@ -273,6 +274,8 @@ inline String<T>::String()
 template<typename T>
 inline String<T>:: String(const T* str)
 {
+	cout << "Call ctor" << endl;
+	cout << "Address object: " << this << endl;
 	size = SizeStr(str);
 	this->str = allocator.allocate(size+1);
 	for (int i = 0; i < size; i++)
@@ -318,10 +321,13 @@ inline String<T>::String(int n)
 template<typename T>
 String<T>::~String() noexcept
 {
+	cout << "Call dtor" << endl;
+	cout << "Address object: " << this << endl;
 	if (str != nullptr)
 	{
 		allocator.deallocate(str, size);
 		this->size = 0;
+		cout << "Memory has been deallocate" << endl;
 	}
 }
 template<typename T>
@@ -467,12 +473,12 @@ inline int String<T>::mystrcmp(const T*  lhs, const T*  rhs)const
 template<typename T>
 inline const bool String<T>::operator>(const String<T>& other)const
 {
-	return mystrcmp(this->str,other.str) <0;
+	return mystrcmp(this->str,other.str) >0;
 }
 template<typename T>
 inline constexpr bool String<T>::operator<(const String<T>& other)const
 {
-	return  mystrcmp(this->str, other.str) >0;
+	return  mystrcmp(this->str, other.str) <0;
 }
 template<typename T>
 inline bool String<T>::operator>=(const String<T>& other)
@@ -671,6 +677,7 @@ inline T& String<T>::at(size_t pos)
 }
 //The function changes the contents of the strings
 template<typename T>
+
 inline void String<T>::swap(String<T>& str)
 {
 	
@@ -1256,14 +1263,16 @@ String<T>& String<T>::append(size_t n, T c)
 	return *this;
 }
 template<typename T>
+template<typename T2>
 //Inserting a character, string at any position in a string
-String<T>& String<T>::insert(size_t num, const T* str)
+
+String<T>& String<T>::insert(size_t num, const T2* str)
 {
 	try
 	{
 		if (str == nullptr)
 			throw bad_alloc();
-		else if (num > size || num < size)
+		 if (num > this->size || num < 0)
 			throw out_of_range("String<T>::insert");
 		String Result;
 		int i = 0, j = 0;
@@ -1505,6 +1514,7 @@ inline void String<T>::readfile(const char *nameF,int choose)
 	{
 		file.open(nameF);
 		char buf[255];
+		int tempsize;
 		file.getline(buf, 100);
 		file.seekg(0, ios_base::end);
 		file.close();
@@ -1536,7 +1546,7 @@ inline void String<T>::writefile(const char* nameF)
 		ofstream file;
 		file.exceptions(ofstream::badbit | ofstream::failbit);
 		file.open(nameF);
-		file << str << '\n' << size;
+		file << str;
 		file.close();
 	}
 	catch (const ofstream::failure& exp)
