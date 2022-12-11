@@ -4,8 +4,8 @@
 
 int main()
 {
-	String<wchar_t> str(L"x");
-	String<wchar_t> str2(L"Pizda");
-	str.append(L"ss", -1);
+	String<wchar_t> str;
+	String<char> str2;
+	str2.find('c', -5);
 	return 0;
 }

@@ -27,11 +27,8 @@ private:
 	using pointer_str = T*;
 	pointer_str str;
 	size_t size;
-	size_t capacity;
-	size_t count_capacity;
+
 	Allocator<T> allocator;
-	
-	
 public:
 
 	static const size_t Npos = -1;
@@ -153,7 +150,7 @@ public:
 	operator char* ();
 	template<typename U>
 	operator String<U>();
-	void Reserve(size_t n=0);
+
 	size_t SizeStr(const T* str)const noexcept;
 	template<typename T2>
 	size_t SizeStr(const T2* str)const noexcept;
@@ -268,13 +265,13 @@ inline String<T>::String(const String& other, size_t pos, size_t count)
 	str[size] = 0;
 }
 template<typename T>
-String<T>::String()
+inline String<T>::String()
 {
 	this->str = nullptr;
 	this->size = 0;
 }
 template<typename T>
-String<T>:: String(const T* str)
+inline String<T>:: String(const T* str)
 {
 	size = SizeStr(str);
 	this->str = allocator.allocate(size+1);
@@ -285,10 +282,10 @@ String<T>:: String(const T* str)
 
 
 template<typename T>
-String<T>::String(const String<T>& other) :String(other.str) {}
+inline String<T>::String(const String<T>& other) :String(other.str) {}
 
 template<typename T>
-String<T>::String(String<T>&& other)noexcept
+inline String<T>::String(String<T>&& other)noexcept
 {
 
 	this->str = other.str;
@@ -297,7 +294,7 @@ String<T>::String(String<T>&& other)noexcept
 	other.size = 0;
 }
 template<typename T>
-String<T>::String(T symbol)
+inline String<T>::String(T symbol)
 {
 	str = allocator.allocate(2);
 	size= 1;
@@ -305,7 +302,7 @@ String<T>::String(T symbol)
 	str[size] = 0;
 }
 template<typename T>
-String<T>::String(size_t n, T symbol)
+inline String<T>::String(size_t n, T symbol)
 {
 	this->str = new T[n + 1];
 	for (int i = 0; i < n; i++)
@@ -314,7 +311,7 @@ String<T>::String(size_t n, T symbol)
 	this->size = n;
 }
 template<typename T>
-String<T>::String(int n)
+inline String<T>::String(int n)
 {
 	String::To_string(n);
 }
@@ -337,26 +334,35 @@ inline size_t String<T>::Copy(T* str, size_t _Count, size_t _Pos)
 }
 //String Size Method
 template<typename T>
-size_t String<T>::Size()const noexcept
+inline size_t String<T>::Size()const noexcept
 {
 	return size;
 }
 template<typename T>
 String<T> String<T>::operator+(const String<T>& other)
 {
-	String<T> s;
-	size_t count = this->size + other.size;
-	s.str = allocator.allocate(count + 1);
-	s.size = count;
-	int i = 0;
-	for (; i < size+1; i++)
-		allocator.construct(s.str + i, str[i]);
-	i--;
-	for (int j = 0; j < other.size; j++, i++)
-		allocator.construct(s.str+i,other.str[j]);
-	s.str[count] = '\0';
-	s.size = count;
-	return s;
+	try
+	{
+		if (other.str == nullptr || other.size == 0)
+			throw bad_alloc();
+		String<T> s;
+		size_t count = this->size + other.size;
+		s.str = allocator.allocate(count + 1);
+		s.size = count;
+		int i = 0;
+		for (; i < size + 1; i++)
+			allocator.construct(s.str + i, str[i]);
+		i--;
+		for (int j = 0; j < other.size; j++, i++)
+			allocator.construct(s.str + i, other.str[j]);
+		s.str[count] = '\0';
+		s.size = count;
+		return s;
+	}
+	catch (const std::bad_alloc& ex)
+	{
+		cout << "Allocation failed: " << ex.what() << endl;
+	}
 }
 //Overloading ()
 template<typename T>
@@ -395,19 +401,28 @@ template<typename T>
 template<typename T2>
 String<T>& String<T>::Replace(size_t pos, size_t len, const T2* s)
 {
-	String str(s);
-	String::Replace(pos, len, str);
-	return *this;
+	try
+	{
+		if (len > Size())
+			throw range_error("String<T>::Replace");
+		String str(s);
+		String::Replace(pos, len, str);
+		return *this;
+	}
+	catch (range_error& re)
+	{
+		cerr << "Range error: " << re.what() << endl;
+	}
 }
 
 template<typename T>
 inline String<T>& String<T>::Replace(const_iterator it1, const_iterator it2, const T* pc)
 {
-	String str(pc);
-	int pos = String::find(*it1);
-	int len = String::find(*it2);
-	String::Replace(pos, len, str);
-	return *this;
+		String str(pc);
+		int pos = String::find(*it1);
+		int len = String::find(*it2);
+		String::Replace(pos, len, str);
+		return *this;
 }
 //Overloading Binary Operators
 template<typename T,typename T2>
@@ -505,13 +520,8 @@ inline String<T>& String<T>::operator=(const String<T2>& s)
 {
 	if (this->str)
 		allocator.deallocate(this->str, size);
-	int count = 0, i = 0;
-	while (s[i] != 0)
-	{
-		count++;
-		i++;
-	}
-	i = 0;
+	int count = SizeStr(s.c_str()), i =0;
+
 	this->size = count;
 	this->str = new T[size + 1];
 	while (s[i] != 0)
@@ -537,24 +547,33 @@ inline size_t String<T>::SizeStr(const T2* str) const noexcept
 template<typename T>
 String<T>& String<T>::operator =(const String<T>& other)
 {
-	if (this->str)
-		allocator.deallocate(this->str,size);
-	int count = 0, i = 0;
-	while (other.str[i] != 0)
+	try
 	{
-		count++;
-		i++;
+		if (other.str == nullptr)
+			throw bad_alloc();
+		if (this->str)
+			allocator.deallocate(this->str, size);
+		int count = 0, i = 0;
+		while (other.str[i] != 0)
+		{
+			count++;
+			i++;
+		}
+		i = 0;
+		this->size = count;
+		this->str = allocator.allocate(size + 1);
+		while (other[i] != 0)
+		{
+			allocator.construct(str + i, other[i]);
+			i++;
+		}
+		this->str[size] = '\0';
+		return *this;
 	}
-	i = 0;
-	this->size = count;
-	this->str = allocator.allocate(size+1);
-	while (other[i] != 0)
+	catch (const bad_alloc& ba)
 	{
-		allocator.construct(str+i,other[i]);
-		i++;
+		cerr << "Allocation failed: " << ba.what() <<": operator=" << endl;
 	}
-	this->str[size] = '\0';
-	return *this;
 }
 template<typename T>
 String<T>& String<T>::operator=(const T* s)
@@ -652,7 +671,7 @@ inline T& String<T>::at(size_t pos)
 }
 //The function changes the contents of the strings
 template<typename T>
-void String<T>::swap(String<T>& str)
+inline void String<T>::swap(String<T>& str)
 {
 	
 	std::swap(size, str.size);
@@ -1240,25 +1259,40 @@ template<typename T>
 //Inserting a character, string at any position in a string
 String<T>& String<T>::insert(size_t num, const T* str)
 {
-	String Result;
-	int i = 0, j = 0;
-	int size = this->size + SizeStr(str);
-	Result.str = allocator.allocate( this->size + SizeStr(str) + 1);
-	for (; i < num; i++)
-		Result.str[i] = this->str[i];
-	for (i; j < SizeStr(str); j++, i++)
-		Result.str[i] = str[j];
-	for (; i < size; num++, i++)
-		Result.str[i] = this->str[num];
-	Result.str[size] = '\0';
-	Result.size = size;
-	allocator.deallocate(this->str,this->size);
-	this->size = size;
-	this->str = allocator.allocate(size+1);
-	for (int i = 0; i < Result.Size(); i++)
-		this->str[i] = Result.str[i];
-	this->str[size] = 0;
-	return *this;
+	try
+	{
+		if (str == nullptr)
+			throw bad_alloc();
+		else if (num > size || num < size)
+			throw out_of_range("String<T>::insert");
+		String Result;
+		int i = 0, j = 0;
+		int size = this->size + SizeStr(str);
+		Result.str = allocator.allocate(this->size + SizeStr(str) + 1);
+		for (; i < num; i++)
+			Result.str[i] = this->str[i];
+		for (i; j < SizeStr(str); j++, i++)
+			Result.str[i] = str[j];
+		for (; i < size; num++, i++)
+			Result.str[i] = this->str[num];
+		Result.str[size] = '\0';
+		Result.size = size;
+		allocator.deallocate(this->str, this->size);
+		this->size = size;
+		this->str = allocator.allocate(size + 1);
+		for (int i = 0; i < Result.Size(); i++)
+			this->str[i] = Result.str[i];
+		this->str[size] = 0;
+		return *this;
+	}
+	catch (const bad_alloc &ba)
+	{
+		cerr << "Allocation failed: " << ba.what() << ": insert()" << endl;
+	}
+	catch (const out_of_range& oor)
+	{
+		cerr << "Out of range:  " << oor.what() << endl;
+	}
 }
 //Method that capitalizes all letters
 template<typename T>
@@ -1297,20 +1331,35 @@ String<T>& String<T>::lower(size_t start, size_t end)
 template<typename T>
 size_t String<T>::find(T symbol, size_t position)
 {
-	size_t result, res = 0;
-	for (int i = position; i < size; i++)
+	try
 	{
-		if (symbol == '\0')
-			return Size();
-		if (str[i] == symbol)
+		if ((str == nullptr) &&((int)position > size || (int)position < size))
+			throw bad_alloc();
+		else if ((int)position > size || (int)position < size)
+			throw range_error("String<T>::find");
+		size_t result, res = 0;
+		for (int i = position; i < size; i++)
 		{
-			return result = i;
-			res++;
+			if (symbol == '\0')
+				return Size();
+			if (str[i] == symbol)
+			{
+				return result = i;
+				res++;
+			}
 		}
+		if (res == 0)
+			std::cout << "Nothing found";
+		return (int)Npos;
 	}
-	if (res == 0)
-		std::cout << "Nothing found";
-	return (int)Npos;
+	catch (const range_error &re)
+	{
+		cerr << "Range error: " << re.what() << endl;
+	}
+	catch (const bad_alloc& re)
+	{
+		cerr << "Allocation failed: " << re.what()<<": find()" << endl;
+	}
 }
 template<typename T>
 size_t String<T>::find(const T* const str, size_t pos)
@@ -1450,47 +1499,50 @@ inline String<T>& String<T>::To_string(T2 n)
 template<typename T>
 inline void String<T>::readfile(const char *nameF,int choose)
 {
-	ifstream file(nameF, ios::in | ios::binary);
-	if (file.is_open()){}
-	else
+	ifstream file;
+	file.exceptions(ifstream::badbit | ifstream::failbit);
+	try
 	{
-		return;
+		file.open(nameF);
+		char buf[255];
+		file.getline(buf, 100);
+		file.seekg(0, ios_base::end);
+		file.close();
+		if (choose == 1)
+		{
+			allocator.deallocate(str, size);
+			str = allocator.allocate(strlen(buf) + 1);
+			size = strlen(buf);
+			for (int i = 0; i < size - 1; i++)
+				allocator.construct(str + i, buf[i]);
+			allocator.construct(str + size - 1, '\0');
+		}
+		else if (choose == 2)
+			cout << buf << endl;
 	}
-	char buf[255];
-	file.getline(buf, 100);
-	file.seekg(0, ios_base::end);
-	file.close();
-	if (choose == 1)
+	catch (const ifstream::failure& ex)
 	{
-		allocator.deallocate(str, size);
-		str = allocator.allocate(strlen(buf) + 1);
-		size = strlen(buf);
-		for (int i = 0; i < size-1; i++)
-			allocator.construct(str + i, buf[i]);
-		allocator.construct(str + size-1,'\0');
+		cout << ex.what() << endl;
+		cout << ex.code() << endl;
 	}
-	else if (choose == 2)
-		cout << buf<<endl;
 }
 
 template<typename T>
 inline void String<T>::writefile(const char* nameF)
 {
-	ofstream file(nameF);
-
+	
 	try
 	{
-		
-		if (!file.is_open())
-		{
-			throw exception("Exception! Memory hasn't been allocated or file was not found\n");
-		}
+		ofstream file;
+		file.exceptions(ofstream::badbit | ofstream::failbit);
+		file.open(nameF);
 		file << str << '\n' << size;
 		file.close();
 	}
-	catch (exception& exp)
+	catch (const ofstream::failure& exp)
 	{
-		cout<<exp.what();
+		cout<<exp.what()<<endl;
+		cout << exp.code()<<endl;
 	}
 }
 template<typename T>
@@ -1529,26 +1581,18 @@ inline String<T>::operator String<U>()
 template<typename T>
 inline String<T>::operator char* ()
 {
-	char* buf = new char[size + 1];
-	for (int i = 0; i < size + 1; i++)
-		buf[i] = (char)str[i];
-	buf[size] = 0;
-	return buf;
-}
-template<typename T>
-inline void String<T>::Reserve(size_t n)
-{
-	if (str && size > 0)
+	try
 	{
-		char* tempstr = allocator.allocate(size + 1);
-		for (int i = 0; i < size; i++)
-			allocator.construct(tempstr + i, str[i]);
-		tempstr[size] = 0;
-		allocator.deallocate(str, size);
-		if (n > capacity)
-			str = allocator.allocate(capacity + 16);
-		for (int i = 0; i < size; i++)
-			allocator.construct(str + i, tempstr[i]);
-		str[n] = 0;
+		if (str == nullptr)
+			throw bad_alloc();
+		char* buf = new char[size + 1];
+		for (int i = 0; i < size + 1; i++)
+			buf[i] = (char)str[i];
+		buf[size] = 0;
+		return buf;
+	}
+	catch (const bad_alloc& ba)
+	{
+		cerr << "Allocation failed: " << ba.what()<<": operator char*" << endl;
 	}
 }
