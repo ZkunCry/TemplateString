@@ -89,12 +89,12 @@ inline Iterator<T> Reverse_Iterator<T>::operator++(int i)
 template<typename T>
 inline Iterator<T>::Iterator(const Iterator<T>& other) :current(other.current) {}
 template<typename T>
-inline Iterator<T>::reference Iterator<T>::operator*()
+inline typename Iterator<T>::reference Iterator<T>::operator*()
 {
 	return *current;
 }
 template<typename T>
-inline Iterator<T>::const_reference Iterator<T>::operator*()const
+inline typename Iterator<T>::const_reference Iterator<T>::operator*()const
 {
 	return *current;
 }
@@ -108,70 +108,70 @@ inline Iterator<T>& Iterator<T>::operator=(const Iterator<T>& other)
 }
 
 template<typename T>
-inline Iterator<T> Iterator<T>::operator+(int n)
+inline   Iterator<T> Iterator<T>::operator+(int n)
 {
 	current += n;
 	return current;
 }
 template<typename T>
-inline Iterator<T> Iterator<T>::operator-(int n)
+inline  Iterator<T> Iterator<T>::operator-(int n)
 {
 	current -= n;
 	return current;
 }
 template<typename T>
-inline Iterator<T>& Iterator<T>::operator++()
+inline  Iterator<T>& Iterator<T>::operator++()
 {
 	++current;
 	return *this;
 }
 template<typename T>
-inline Iterator<T>& Iterator<T>::operator--()
+inline  Iterator<T>& Iterator<T>::operator--()
 {
 	--current;
 	return *this;
 }
 template<typename T>
-inline Iterator<T> Iterator<T>::operator--(int i)
+inline  Iterator<T> Iterator<T>::operator--(int i)
 {
 	Iterator temp(current);
 	--current;
 	return  temp;
 }
 template<typename T>
-inline  Iterator<T> Iterator<T>::operator++(int i)
+inline   Iterator<T> Iterator<T>::operator++(int i)
 {
 	Iterator temp(*this);
 	++current;
 	return temp;
 }
 template<typename T>
-bool Iterator<T>::operator==(const Iterator<T>& other)const
+ bool Iterator<T>::operator==(const Iterator<T>& other)const
 {
 	return (current == other.current);
 }
 template<typename T>
-bool Iterator<T>::operator!=(const Iterator<T>& other)const
+ bool Iterator<T>::operator!=(const Iterator<T>& other)const
 {
 	return !(current == other.current);
 }
 template<typename T>
-inline bool Iterator<T>::operator>(const Iterator& other) const
+ inline bool Iterator<T>::operator>(const Iterator& other) const
 {
 	return current > other.current;
 }
 template<typename T>
-inline bool Iterator<T>::operator<(const Iterator& other) const
+inline  bool Iterator<T>::operator<(const Iterator& other) const
 {
 	return !(current > other.current);
 }
 template<typename T>
-inline bool Iterator<T>::operator>=(const Iterator& other) const
+inline   bool Iterator<T>::operator>=(const Iterator& other) const
 {
 	return current >= other.current;
 }
 template<typename T>
-inline bool Iterator<T>::operator<=(const Iterator& other) const
+inline   bool Iterator<T>::operator<=(const Iterator& other) const
 {
 	return (current >= other.current);
 }

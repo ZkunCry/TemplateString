@@ -17,7 +17,7 @@ public:
 	pointer address(reference value) const;
 	const_pointer address(const_reference value) const;
 	Allocator()throw();
-	Allocator(const Allocator&)throw();
+	Allocator(const Allocator& x)throw();
 	template <class U>
 	Allocator(const Allocator<U>&)throw();
 	~Allocator() noexcept;
@@ -34,46 +34,46 @@ public:
 };
 
 template<typename T>
-inline Allocator<T>::pointer Allocator<T>::address(reference value) const
+inline typename Allocator<T>::pointer Allocator<T>::address(reference value) const
 {
 	return &value;
 }
 
 template<typename T>
-inline  Allocator<T>::const_pointer Allocator<T>::address(const_reference value) const
+inline  typename Allocator<T>::const_pointer Allocator<T>::address(const_reference value) const
 {
 	return &value;
 }
 
 template<typename T>
-inline Allocator<T>::Allocator(const Allocator&)throw()
+inline  Allocator<T>::Allocator(const Allocator<T>& x)throw()
 {
 }
 
 template<typename T>
-inline Allocator<T>::Allocator()throw()
+inline  Allocator<T>::Allocator()throw()
 {
 }
 
 template<typename T>
 template<class U>
-inline Allocator<T>::Allocator(const Allocator<U>&)throw()
+inline  Allocator<T>::Allocator(const Allocator<U>&)throw()
 {
 }
 
 template<typename T>
-inline Allocator<T>::~Allocator() noexcept
+inline  Allocator<T>::~Allocator() noexcept
 {
 }
 
 template<typename T>
-inline Allocator<T>::size_type Allocator<T>::max_size() const
+inline typename Allocator<T>::size_type Allocator<T>::max_size() const
 {
 	return std::numeric_limits<std::size_t>::max() / sizeof(T);
 }
 
 template<typename T>
-inline Allocator<T>::pointer Allocator<T>::allocate(size_type num, const void*)
+inline typename Allocator<T>::pointer Allocator<T>::allocate(size_type num, const void*)
 {
 	 pointer ret = (pointer)(::operator new(num * sizeof(T)));
 	 return ret;
@@ -81,32 +81,32 @@ inline Allocator<T>::pointer Allocator<T>::allocate(size_type num, const void*)
 }
 
 template<typename T>
-inline void Allocator<T>::construct(pointer p, const T& value)
+inline  void Allocator<T>::construct(pointer p, const T& value)
 {
 	new((void*)p)T(value);
 }
 
 template<typename T>
-inline void Allocator<T>::destroy(pointer  p)
+inline  void Allocator<T>::destroy(pointer  p)
 {
 	((T *)p)->~T();
 }
 template<typename T>
 template<class U>
-inline void Allocator<T>::destroy(U* p)
+inline  void Allocator<T>::destroy(U* p)
 {
 	p->~U();
 }
 template<typename T>
-inline void Allocator<T>::deallocate(pointer p, size_type num)
+inline  void Allocator<T>::deallocate(pointer p, size_type num)
 {
 	::operator delete((void*)p);
 }
 template<typename T,typename T2>
-inline bool operator ==(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
+inline  bool operator ==(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
 	return true;
 }
 template<typename T, typename T2>
-inline bool operator !=(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
+inline  bool operator !=(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
 	return false;
 }

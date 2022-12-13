@@ -1,6 +1,6 @@
 //Template Class String and Iterators by Eugene
 #pragma once
-#define _CRT_SECURE_NO_WARNINGS
+
 
 #include <iostream>
 #include <string.h>
@@ -73,18 +73,18 @@ public:
 	String& operator =(T c);
 	String operator+(const String<T>& other);
 	String operator+(size_t number);
-	template<typename T>
+	template<typename T2>
 	friend String operator+(const String& lhs, const String& rhs);
 	const bool operator>(const String& other)const;
 	constexpr bool operator<(const String& other)const;
 	bool operator>=(const String& other);
 	bool operator<=(const String& other);
-	template<typename T,typename T2>
+	template<typename T2>
 	friend String<T>& operator+=(String<T>& left, const String<T2>& right);
-	template<typename T>
-	friend std::ostream& operator<<(std::ostream& out, const String<T>& other);
-	template<typename T>
-	friend std::istream& operator>>(std::istream& is, String<T>& str);
+	template <typename T2>
+	friend  std::ostream& operator<<(std::ostream& out, const String<T2>& other);
+	template <typename T2>
+	friend std::istream& operator>>(std::istream& is, String<T2>& str);
 	/////////////////////////////////////////////
 	//Methods for working with strings////
 	const T* c_str() const noexcept;
@@ -160,22 +160,22 @@ using wsstring = String<wchar_t>;
 //Const_reverse iterator
 
 template<typename T>
-inline String<T>::const_reverse_iterator String<T>::rcbegin() const noexcept
+ inline typename  String<T>::const_reverse_iterator String<T>::rcbegin() const noexcept
 {
 	return const_reverse_iterator(str + size - 1);
 }
 template<typename T>
-inline String<T>::const_reverse_iterator String<T>::rcend() const noexcept
+inline typename  String<T>::const_reverse_iterator String<T>::rcend() const noexcept
 {
 	return const_reverse_iterator(str - 1);
 }
 template<typename T>
-String<T>::const_iterator String<T>::cbegin()const noexcept
+typename String<T>::const_iterator String<T>::cbegin()const noexcept
 {
 	return const_iterator(str);
 }
 template<typename T>
-String<T>::const_iterator String<T>::cend() const noexcept
+typename String<T>::const_iterator String<T>::cend() const noexcept
 {
 	return const_iterator(str + size);
 }
@@ -184,23 +184,23 @@ String<T>::const_iterator String<T>::cend() const noexcept
 //////////
 /// Class Iterator(Const) and Reverse Iterator
 template<typename T>
-inline String<T>::iterator String<T>::begin()const noexcept
+inline typename  String<T>::iterator String<T>::begin()const noexcept
 {
 	return iterator(str);
 }
 template<typename T>
-inline String<T>::iterator String<T>::end()const noexcept
+inline typename  String<T>::iterator String<T>::end()const noexcept
 {
 	return iterator(str + size);
 }
 
 template<typename T>
-inline String<T>::reverse_iterator String<T>::rbegin() const noexcept
+inline typename  String<T>::reverse_iterator String<T>::rbegin() const noexcept
 {
 	return reverse_iterator(str + size - 1);
 }
 template<typename T>
-inline String<T>::reverse_iterator String<T>::rend() const noexcept
+inline typename  String<T>::reverse_iterator String<T>::rend() const noexcept
 {
 	return reverse_iterator(str-1);
 }
@@ -1098,7 +1098,7 @@ String<T>& String<T>::assign(const String<T>& str)
 	}
 	catch (const bad_alloc& ba)
 	{
-		cerr << "Allocation failed: " << ba.what << endl;
+		cerr << "Allocation failed: " << ba.what() << endl;
 	}
 }
 //Method for finding a specific fragment in a string
@@ -1267,7 +1267,7 @@ String<T>& String<T>::append(const String<T>& str)
 	}
 	catch (const bad_alloc ba)
 	{
-		cerr << "Allocation failed: " << ba << endl;
+		cerr << "Allocation failed: " << ba.what()<<endl;
 	}
 }
 template<typename T>
@@ -1357,10 +1357,10 @@ String<T>& String<T>::upper(size_t start, size_t end)
 		}
 	}
 	catch (const bad_alloc& baa) {
-		cerr << "Allocation failed: " << baa << endl;
+		cout << "Allocation failed: " << baa.what() << endl;
 	}
 	catch (const out_of_range& oof) {
-		cerr << "Out of range: " << oof << endl;
+		cout << "Out of range: " << oof.what();
 	}
 }
 //Method that makes all letters small (lowercase)
@@ -1386,10 +1386,10 @@ String<T>& String<T>::lower(size_t start, size_t end)
 		}
 	}
 	catch (const bad_alloc& baa) {
-		cerr << "Allocation failed: " << baa << endl;
+		cerr << "Allocation failed: " << baa.what() << endl;
 	}
 	catch (const out_of_range& oof) {
-		cerr << "Out of range: " << oof << endl;
+		cerr << "Out of range: " << oof.what() << endl;
 	}
 }
 //Method for finding a character that is in a specific position
@@ -1528,12 +1528,12 @@ inline const char& String<T>::back()
 }
 
 //Overloading cin and cout
-template<typename T>
-inline std::ostream& operator<<(std::ostream& out, const String<T>& other)
+template<typename T2>
+inline std::ostream& operator<<(std::ostream& out, const String<T2>& other)
 {
 	return out << other.str;
 }
-template<typename T>
+template<typename T,typename T2>
 std::istream& operator>>(std::istream& is, String<T>& str)
 {
 	char* buf = new char[100001]; //create a temporary buffer to write any found string
