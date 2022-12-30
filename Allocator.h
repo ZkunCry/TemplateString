@@ -1,6 +1,6 @@
 #pragma once
 #include <limits>
-
+#include "String.h"
 template<typename T>
 class Allocator
 {
@@ -14,6 +14,11 @@ public:
 	typedef std::size_t    size_type;
 	typedef std::ptrdiff_t difference_type;
 
+	template<class T2>
+	struct rebind {
+		typedef Allocator<T2> other;
+	};
+
 	pointer address(reference value) const;
 	const_pointer address(const_reference value) const;
 	Allocator()throw();
@@ -23,14 +28,15 @@ public:
 	~Allocator() noexcept;
 	size_type max_size() const;
 	pointer allocate(size_type num, const void* = 0);
-
 	void construct(pointer p, const T& value);
-
 	void destroy(pointer p);
-	template<class U>
-	void destroy(U * p);
 	void deallocate(pointer p, size_type num);
+	template<typename T2>
+	friend bool operator ==(const Allocator<T>& lhs, const Allocator<T2>rhs)throw();
+	template<typename T2>
+	friend bool operator !=(const Allocator<T>& lhs, const Allocator<T2>rhs)throw();
 
+	Allocator<T>& operator = (const Allocator<T>& right) = default;
 };
 
 template<typename T>
@@ -53,6 +59,7 @@ inline Allocator<T>::Allocator(const Allocator&)throw()
 template<typename T>
 inline Allocator<T>::Allocator()throw()
 {
+
 }
 
 template<typename T>
@@ -73,11 +80,11 @@ inline Allocator<T>::size_type Allocator<T>::max_size() const
 }
 
 template<typename T>
-inline Allocator<T>::pointer Allocator<T>::allocate(size_type num, const void*)
+inline Allocator<T>::pointer Allocator<T>::allocate(size_type num, 
+	                                                const void*)
 {
 	 pointer ret = (pointer)(::operator new(num * sizeof(T)));
 	 return ret;
-	
 }
 
 template<typename T>
@@ -89,14 +96,9 @@ inline void Allocator<T>::construct(pointer p, const T& value)
 template<typename T>
 inline void Allocator<T>::destroy(pointer  p)
 {
-	((T *)p)->~T();
+	((T*)p)->~T();
 }
-template<typename T>
-template<class U>
-inline void Allocator<T>::destroy(U* p)
-{
-	p->~U();
-}
+
 template<typename T>
 inline void Allocator<T>::deallocate(pointer p, size_type num)
 {
@@ -104,9 +106,9 @@ inline void Allocator<T>::deallocate(pointer p, size_type num)
 }
 template<typename T,typename T2>
 inline bool operator ==(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
-	return true;
+	return lhs == rhs;
 }
 template<typename T, typename T2>
 inline bool operator !=(const Allocator<T>& lhs, const Allocator<T2>rhs)throw() {
-	return false;
+	return !(lhs ==rhs);
 }
